@@ -1,0 +1,53 @@
+{
+  "name": "frontend",
+  "description": "frontend",
+  "author": "ivglad",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate-pwa-assets": "pwa-assets-generator"
+  },
+  "dependencies": {
+    "@primeuix/themes": "^1.2.1",
+    "@primevue/forms": "^4.3.6",
+    "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/vue-query": "^5.83.0",
+    "@vueuse/core": "^13.5.0",
+    "axios": "^1.11.0",
+    "dotenv": "^17.2.1",
+    "motion-v": "^1.6.1",
+    "pinia": "^3.0.3",
+    "primevue": "^4.3.6",
+    "tailwindcss": "^4.1.11",
+    "tailwindcss-primeui": "^0.6.1",
+    "vue": "^3.5.18",
+    "vue-router": "^4.5.1",
+    "zod": "^4.0.10"
+  },
+  "devDependencies": {
+    "@primevue/auto-import-resolver": "^4.3.6",
+    "@vite-pwa/assets-generator": "^1.0.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "sass": "^1.89.2",
+    "sharp": "^0.34.3",
+    "svgo": "^4.0.0",
+    "unplugin-auto-import": "^19.3.0",
+    "unplugin-icons": "^22.1.0",
+    "unplugin-vue-components": "^28.8.0",
+    "vite": "^7.0.6",
+    "vite-plugin-image-optimizer": "^2.0.2",
+    "vite-plugin-pwa": "^1.0.2"
+  },
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ]
+}

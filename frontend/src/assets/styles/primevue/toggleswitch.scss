@@ -1,0 +1,13 @@
+@layer preset {
+  :root {
+    --p-toggleswitch-width: 3.4rem;
+    --p-toggleswitch-height: 2rem;
+    --p-toggleswitch-handle-size: 1.4rem;
+  }
+
+  .p-toggleswitch {
+    &.p-toggleswitch-checked.p-disabled .p-toggleswitch-slider {
+      border-color: var(--p-toggleswitch-border-color);
+    }
+  }
+} 

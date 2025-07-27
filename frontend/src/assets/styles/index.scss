@@ -1,0 +1,13 @@
+@use 'reset';
+@forward 'main';
+
+@forward '@/assets/styles/variables';
+@forward '@/assets/styles/mixins';
+
+@forward '@/assets/styles/fonts';
+@forward '@/assets/styles/animations';
+@forward '@/assets/styles/common';
+
+@forward '@/assets/styles/primevue/_index';
+
+@forward '@/assets/styles/components';

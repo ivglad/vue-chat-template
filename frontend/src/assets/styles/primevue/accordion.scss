@@ -1,0 +1,14 @@
+@layer preset {
+  .p-accordion {
+    .p-accordionheader,
+    .p-accordionheader svg {
+      transition: color var(--p-accordion-transition-duration),
+        background var(--p-accordion-transition-duration);
+    }
+    .p-accordionpanel {
+      &:last-child {
+        border-color: transparent;
+      }
+    }
+  }
+} 

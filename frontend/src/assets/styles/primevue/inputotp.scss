@@ -1,0 +1,8 @@
+@layer preset {
+  .p-inputotp {
+    .p-inputtext {
+      width: var(--p-inputtext-app-min-height);
+      min-width: var(--p-inputtext-app-min-height);
+    }
+  }
+} 

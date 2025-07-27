@@ -1,0 +1,322 @@
+@use '@/assets/styles/variables' as *;
+@use '@/assets/styles/mixins' as *;
+
+@layer app {
+  .app-button {
+    &-icon {
+      &-right {
+        order: 2;
+        & + .p-button-label {
+          order: 1;
+        }
+      }
+      &-left {
+        order: 1;
+        & + .p-button-label {
+          order: 2;
+        }
+      }
+      &-top {
+        order: 1;
+        & + .p-button-label {
+          order: 2;
+        }
+      }
+      &-bottom {
+        order: 2;
+        & + .p-button-label {
+          order: 1;
+        }
+      }
+    }
+  }
+
+  .app-input {
+    position: relative;
+    display: flex;
+    width: 100%;
+    &:has(input:focus) &-message {
+      opacity: 0;
+      pointer-events: none;
+    }
+    &:has(input:not(:focus)):has(&-message.p-message-error) {
+      label {
+        opacity: 0;
+      }
+    }
+    &-message {
+      @include transition;
+      position: absolute;
+      inset: 2px;
+      padding-block: var(--p-inputtext-padding-y);
+      padding-inline: var(--p-inputtext-padding-x);
+      padding-inline-start: calc(var(--p-inputtext-padding-x) + 1px);
+      padding-inline-end: calc(var(--p-inputtext-padding-x) * 2);
+      border-radius: var(--p-inputtext-border-radius);
+      user-select: none;
+      pointer-events: none;
+      background: var(--p-inputtext-background);
+      z-index: 1;
+      .p-message-text {
+        line-height: 1;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+    }
+    &-mask,
+    &-help {
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    &-button {
+      padding: 0;
+    }
+  }
+
+  .app-checkbox,
+  .app-radio {
+    display: flex;
+    align-items: center;
+    .p-disabled + .app-checkbox-message,
+    .p-disabled + .app-radio-message {
+      opacity: 0.4;
+      filter: grayscale(0.9);
+      pointer-events: none;
+    }
+    &-message {
+      padding-left: 1rem;
+      color: inherit;
+      cursor: pointer;
+      user-select: none;
+    }
+  }
+
+  .app-multiselect-extended {
+    &-overlay {
+      background: color-mix(
+        in srgb,
+        var(--p-surface-100),
+        var(--p-surface-0) 50%
+      );
+      .p-multiselect {
+        &-list {
+          gap: 1rem;
+          padding-right: 0;
+        }
+        &-option {
+          align-items: start;
+          gap: 1rem;
+          margin-left: 0.75rem;
+          border-radius: var(--p-border-radius-lg);
+          &:not(&-selected):not(.p-disabled):not(.p-focus) {
+            background: var(--p-surface-0);
+          }
+          .option-content {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 300px;
+            &-info {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 1rem;
+            }
+            span {
+              text-wrap: wrap;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .app-chip {
+    gap: 0.2rem;
+    &-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      min-width: 2.5rem;
+      min-height: 2.5rem;
+      line-height: 2.5rem;
+      font-size: 1.2rem;
+      color: var(--p-primary-contrast-color);
+      background-color: var(--p-surface-500);
+      border-radius: 10rem;
+      user-select: none;
+    }
+  }
+
+  .app-fileupload {
+    border-style: dashed;
+    border-width: 2px;
+    width: 40rem;
+    &-file {
+      display: flex;
+      align-items: start;
+      gap: 1rem;
+      &-name {
+        max-width: 25rem;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+      }
+      &-info {
+        display: flex;
+        flex-direction: column;
+      }
+      .p-button-icon-only {
+        width: min-content;
+        height: min-content;
+        min-width: min-content;
+        min-height: min-content;
+        padding: 0;
+        margin: 0 0 0 auto;
+        border: none;
+      }
+    }
+  }
+
+  .app-confirm {
+    &-modified {
+      border-color: var(--p-primary-950);
+      background-color: var(--p-primary-950);
+      .p-dialog {
+        &-header {
+          color: var(--p-surface-50);
+        }
+        &-content {
+          max-width: 20rem;
+          color: var(--p-surface-50);
+        }
+      }
+    }
+  }
+
+  .app-dialog {
+    width: clamp(30rem, 60%, 140rem);
+    max-width: 100%;
+  }
+
+  .app-drawer {
+    width: 30rem;
+    .p-drawer {
+      &-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+      }
+    }
+  }
+
+  .app-popover {
+    .p-popover {
+      &-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
+    &-element {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem 1rem;
+      border-radius: var(--p-border-radius-lg);
+      @include active {
+        background: var(--p-surface-100);
+      }
+    }
+  }
+
+  .app-card {
+    width: 30rem;
+    overflow: hidden;
+    .p-card {
+      &-header {
+        padding: var(--p-select-option-padding);
+      }
+      &-body {
+        height: 100%;
+      }
+      &-footer {
+        display: flex;
+        justify-content: end;
+        gap: 1rem;
+        margin-top: auto;
+      }
+    }
+    &-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: var(--p-select-option-padding);
+      cursor: pointer;
+      .icon {
+        font-size: 1.4rem;
+      }
+    }
+  }
+
+  .app-stepper {
+    &-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 2rem;
+    }
+  }
+
+  .app-toast {
+    flex-direction: column;
+    &-summary {
+      display: flex;
+      align-items: center;
+      gap: var(--p-toast-content-gap);
+      width: 100%;
+      .icon {
+        flex: 0 0 auto;
+      }
+    }
+    &-close-button {
+      width: fit-content;
+      margin-left: auto;
+    }
+  }
+
+  .app-progressline {
+    height: 4px;
+    &-percent {
+      height: 20px;
+    }
+  }
+  .app-progressspinner {
+    width: 42px;
+    height: 42px;
+    &-inside {
+      position: absolute;
+      top: 50%;
+      right: var(--p-inputtext-padding-x);
+      width: 2.5rem;
+      height: 2.5rem;
+      transform: translateY(-50%);
+      transition-duration: 0.9s;
+      animation-duration: 0.9s;
+    }
+  }
+
+  .app-carousel {
+    .p-carousel {
+      &-item {
+        & > * {
+          width: auto;
+          height: calc(100% - 1rem);
+          margin: 0.5rem;
+        }
+      }
+    }
+  }
+}

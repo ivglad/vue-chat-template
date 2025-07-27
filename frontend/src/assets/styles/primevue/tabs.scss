@@ -1,0 +1,14 @@
+@layer preset {
+  :root {
+    --p-tabs-tablist-border-width: 0 0 3px 0;
+    --p-tabs-tablist-border-color: transparent;
+    --p-tabs-tab-margin: 0 0 -3px 0;
+    --p-tabs-tab-border-width: 0 0 3px 0;
+    --p-tabs-tab-border-color: transparent;
+    --p-tabs-tab-color: var(--p-text-color);
+    --p-tabs-tab-hover-color: var(--p-primary-color);
+    --p-tabs-tab-hover-border-color: transparent;
+    --p-tabs-active-bar-height: 3px;
+    --p-tabs-active-bar-bottom: -3px;
+  }
+}

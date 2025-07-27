@@ -1,0 +1,18 @@
+@layer preset {
+  :root {
+    --p-checkbox-width: 2rem;
+    --p-checkbox-height: 2rem;
+    --p-checkbox-border-radius: var(--p-border-radius-xs);
+    --p-checkbox-sm-width: 1.4rem;
+    --p-checkbox-sm-height: 1.4rem;
+    --p-checkbox-lg-width: 2.4rem;
+    --p-checkbox-lg-height: 2.4rem;
+    --p-checkbox-icon-size: 1.2rem;
+    --p-checkbox-icon-sm-size: 0.8rem;
+    --p-checkbox-icon-lg-size: 1.6rem;
+  }
+
+  .p-checkbox-icon {
+    filter: drop-shadow(0 0 0.5px var(--p-primary-color)); 
+  }
+} 

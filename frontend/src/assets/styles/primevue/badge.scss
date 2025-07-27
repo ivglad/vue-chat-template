@@ -1,0 +1,30 @@
+@layer preset {
+  :root {
+    --p-badge-font-size: var(--p-app-font-size-sm);
+    --p-badge-font-weight: 400;
+    --p-badge-min-width: 1.8rem;
+    --p-badge-height: 1.8rem;
+    --p-badge-padding: 0.5rem 0.5rem;
+    --p-badge-border-radius: 10rem;
+    --p-badge-xl-font-size: var(--p-app-font-size-lg);
+    --p-badge-xl-min-width: 2.2rem;
+    --p-badge-xl-height: 2.2rem;
+    --p-badge-lg-font-size: var(--p-app-font-size);
+    --p-badge-lg-min-width: 2rem;
+    --p-badge-lg-height: 2rem;
+    --p-badge-sm-font-size: var(--p-app-font-size-sm);
+    --p-badge-sm-min-width: 1.6rem;
+    --p-badge-sm-height: 1.6rem;
+    --p-badge-dot-size: 0.6rem;
+  }
+
+  .p-overlaybadge {
+    width: fit-content;
+    height: fit-content;
+    .p-badge {
+      &:not(.p-badge-circle) {
+        transform: translate(90%, -50%);
+      }
+    }
+  }
+} 

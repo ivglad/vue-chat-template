@@ -1,0 +1,8 @@
+/.vscode
+/pnpm-lock.yaml
+/node_modules
+/dev-dist
+/package-lock.json
+/dist
+/auto-imports.d.ts
+/components.d.ts

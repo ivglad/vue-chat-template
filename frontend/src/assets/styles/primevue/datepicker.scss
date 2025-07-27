@@ -1,0 +1,29 @@
+@layer preset {
+  :root {
+    --p-datepicker-select-month-padding: 0.5rem 1rem;
+    --p-datepicker-select-year-padding: 0.5rem 1rem;
+    --p-datepicker-title-font-weight: 700;
+    --p-datepicker-month-view-margin: 1rem 0;
+    --p-datepicker-day-view-margin: 1rem 0;
+    --p-datepicker-week-day-font-weight: 700;
+    --p-datepicker-date-width: 3rem;
+    --p-datepicker-date-height: 3rem;
+    --p-datepicker-date-border-radius: var(--p-border-radius-sm);
+    --p-datepicker-app-day-font-size: var(--p-app-font-size);
+    --p-datepicker-app-day-disabled-color: var(--p-app-disabled-color);
+  }
+
+  .p-datepicker-day,
+  .p-datepicker-weekday,
+  .p-datepicker-time-picker {
+    font-size: var(--p-datepicker-app-day-font-size);
+    &.p-disabled {
+      color: var(--p-datepicker-app-day-disabled-color);
+    }      
+  }
+  .p-datepicker-input:disabled + .p-datepicker-input-icon-container {
+    color: var(--p-datepicker-app-day-disabled-color);
+    opacity: 0.6;
+    pointer-events: none;
+  }
+} 

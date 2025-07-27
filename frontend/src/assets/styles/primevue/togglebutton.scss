@@ -1,0 +1,11 @@
+@layer preset {
+  :root {
+    --p-togglebutton-padding: 0.3rem 0.3rem;
+    --p-togglebutton-content-padding: 0.5rem 0.5rem;
+    --p-togglebutton-content-border-radius: var(--p-border-radius-sm);
+  }
+
+  .p-togglebutton::before {
+    border-radius: var(--p-border-radius-sm);
+  }
+}

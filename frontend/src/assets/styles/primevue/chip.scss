@@ -1,0 +1,24 @@
+@layer preset {
+  :root {
+    --p-chip-padding-x: 0.3rem;
+    --p-chip-padding-y: 0.3rem;
+    --p-chip-gap: 0;
+    --p-chip-border-radius: 10rem;
+    --p-chip-icon-size: 2rem;
+    --p-chip-remove-icon-size: 2rem;
+    --p-chip-app-font-size: var(--p-app-font-size-sm);
+  }
+
+  .p-chip {
+    font-size: var(--p-chip-app-font-size);
+    .p-chip-label {
+      padding-block: 0;
+      padding-inline: var(--p-chip-padding-x);
+    }
+    .icon-close {
+      min-width: fit-content;
+      min-height: fit-content;
+      color: var(--p-chip-remove-icon-color);
+    }
+  }
+} 

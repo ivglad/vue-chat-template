@@ -1,0 +1,59 @@
+services:
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    container_name: nginx-${DOCKER_PROJECT_NAME:-default}
+    restart: unless-stopped
+    tty: true
+    volumes:
+      - ./docker/nginx/logs:/var/log/nginx
+    ports:
+      - ${HOST_FRONTEND_PORT}:80
+    env_file:
+      - ./.env
+    networks:
+      - frontend-network
+    depends_on:
+      - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./docker/frontend/Dockerfile
+    container_name: frontend-${DOCKER_PROJECT_NAME:-default}
+    restart: unless-stopped
+    volumes:
+      - ./frontend:/var/www/frontend
+      - frontend_dependencies:/var/www/frontend/node_modules
+    env_file:
+      - ./frontend/.env
+    networks:
+      - frontend-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+
+volumes:
+  frontend_dependencies:
+
+networks:
+  frontend-network:
+    driver: bridge

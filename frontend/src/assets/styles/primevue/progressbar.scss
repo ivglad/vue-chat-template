@@ -1,0 +1,11 @@
+@layer preset {
+  :root {
+    --p-progressbar-label-font-size: var(--p-app-font-size-sm);
+  }
+
+  .p-progressbar {
+    &-label {
+      line-height: 100%;
+    }
+  }
+}

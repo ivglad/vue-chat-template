@@ -1,0 +1,34 @@
+@use '@/assets/styles/variables' as *;
+@use '@/assets/styles/mixins' as *;
+
+@include font-face(400, 'Inter-VariableFont_opsz,wght');
+
+@layer app {
+  // Font sizes
+  .fs-xl {
+    font-size: $fs-xl;
+  }
+  .fs-l {
+    font-size: $fs-l;
+  }
+  .fs-m {
+    font-size: $fs-m;
+  }
+  .fs-s {
+    font-size: $fs-s;
+  }
+  .fs-xs {
+    font-size: $fs-xs;
+  }
+
+  // Font weights
+  .fw-bold {
+    font-weight: 700;
+  }
+  .fw-semibold {
+    font-weight: 600;
+  }
+  .fw-regular {
+    font-weight: 400;
+  }
+}

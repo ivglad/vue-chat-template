@@ -1,0 +1,89 @@
+@layer preset {
+  // --------------------------------------------------------------------------
+  // Font for elements
+  // --------------------------------------------------------------------------
+  button:not([class*='sm']):not([class*='lg']),
+  input:not([class*='sm']):not([class*='lg']),
+  textarea:not([class*='sm']):not([class*='lg']) {
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+  }
+  button {
+    line-height: 100%;
+  }
+  input,
+  textarea {
+    line-height: inherit;
+  }
+  // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // Overlay offsets
+  // --------------------------------------------------------------------------
+  [data-pc-section='overlay'],
+  [data-pc-section='panel'] {
+    &:not(.p-colorpicker-panel-inline) {
+      margin-top: 0.5rem;
+      &[style*='margin-top'] {
+        margin-top: -0.5rem !important;
+      }
+    }
+  }
+  // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // Disabled styles
+  // --------------------------------------------------------------------------
+  .p-disabled,
+  .p-component[disabled] {
+    &::placeholder {
+      color: var(--p-app-disabled-color);
+    }
+    opacity: var(--p-disabled-opacity);
+    filter: grayscale(calc(var(--p-disabled-opacity) + 0.1));
+    user-select: none;
+    pointer-events: none;
+    &.p-button {
+      opacity: var(--p-disabled-opacity);
+      filter: grayscale(calc(var(--p-disabled-opacity) + 0.1));
+    }
+
+    &:not(:has(.p-disabled)):not(:has(.p-component[disabled])) {
+      opacity: var(--p-disabled-opacity);
+      filter: grayscale(calc(var(--p-disabled-opacity) + 0.1));
+      &.p-button {
+        opacity: var(--p-disabled-opacity);
+        filter: grayscale(calc(var(--p-disabled-opacity) + 0.1));
+      }
+    }
+
+    &:has(.p-disabled),
+    &:has(.p-component[disabled]) {
+      opacity: 1;
+      filter: none;
+    }
+
+    > * {
+      opacity: 1;
+      filter: none;
+    }
+
+    &:not(.p-button) .icon,
+    &:not(.p-button) .p-icon,
+    + .icon,
+    + .p-icon {
+      opacity: var(--p-disabled-opacity);
+      filter: grayscale(calc(var(--p-disabled-opacity) + 0.1));
+      cursor: default;
+      user-select: none;
+      pointer-events: none;
+    }
+    + label {
+      color: var(--p-app-disabled-color);
+      opacity: var(--p-disabled-opacity);
+      filter: grayscale(calc(var(--p-disabled-opacity) + 0.1));
+    }
+  }
+  // --------------------------------------------------------------------------
+}

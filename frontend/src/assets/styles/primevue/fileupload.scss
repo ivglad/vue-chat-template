@@ -1,0 +1,14 @@
+@layer preset {
+  :root {
+    --p-fileupload-header-padding: 1rem 1rem 0.5rem 1rem;
+    --p-fileupload-content-padding: 0.5rem 1rem 1rem 1rem;
+    --p-fileupload-border-radius: var(--p-border-radius-sm);
+    --p-fileupload-background: transparent;
+  }
+
+  .p-fileupload {
+    &-content {
+      border-radius: var(--p-fileupload-border-radius);
+    }
+  }
+}
