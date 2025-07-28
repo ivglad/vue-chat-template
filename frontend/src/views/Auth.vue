@@ -67,20 +67,20 @@ const loginSubmit = async (e) => {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center gap-4 w-full">
-    <h1 class="auth__title">Авторизация</h1>
+  <div class="flex flex-col items-center justify-center flex-1 gap-5 w-full">
+    <h1 class="text-2xl mb-6">Авторизация</h1>
     <Form
-      class="auth-form"
+      class="auth-form flex flex-col items-center"
       :initialValues
       :resolver="loginResolver"
       @submit="loginSubmit">
       <FormField
-        class="auth-form__formfield"
+        class="auth-form__formfield mb-8 w-full"
         v-slot="$field"
         :validateOnValueUpdate="false"
         validateOnBlur
         name="username">
-        <FloatLabel class="app-input">
+        <FloatLabel class="app-input text-base">
           <InputText
             id="auth-form-username"
             v-tooltip.top="{
@@ -88,16 +88,17 @@ const loginSubmit = async (e) => {
               showDelay: 500,
             }"
             :invalid="$field?.invalid"
-            fluid />
+            fluid
+            class="rounded-xl" />
           <Message
-            class="app-input-message"
+            class="app-input-message text-base"
             :severity="$field?.invalid ? 'error' : 'contrast'"
             variant="simple"
             size="small"
             v-if="$field?.invalid && $field.error?.message">
             {{ $field.error?.message }}
           </Message>
-          <label for="auth-form-username">Логин</label>
+          <label for="auth-form-username" class="text-sm">Логин</label>
         </FloatLabel>
       </FormField>
       <FormField
@@ -106,7 +107,7 @@ const loginSubmit = async (e) => {
         :validateOnValueUpdate="false"
         validateOnBlur
         name="password">
-        <FloatLabel class="app-input">
+        <FloatLabel class="app-input text-base">
           <Password
             id="auth-form-password"
             type="text"
@@ -116,20 +117,21 @@ const loginSubmit = async (e) => {
             }"
             :feedback="false"
             toggleMask
-            fluid />
+            fluid
+            class="rounded-xl" />
           <Message
-            class="app-input-message"
+            class="app-input-message text-base"
             :severity="$field?.invalid ? 'error' : 'contrast'"
             variant="simple"
             size="small"
             v-if="$field?.invalid && $field.error?.message">
             {{ $field.error?.message }}
           </Message>
-          <label for="auth-form-password">Пароль</label>
+          <label for="auth-form-password" class="text-sm">Пароль</label>
         </FloatLabel>
       </FormField>
       <Button
-        class="auth-form__submit"
+        class="auth-form__submit mt-6 w-fit h-[3.25rem] p-4 rounded-xl text-base"
         type="submit"
         label="Войти в систему"
         :loading="loginUserIsPending">

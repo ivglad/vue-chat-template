@@ -1,1 +1,8 @@
-@layer preset {}
+@layer preset {
+  :root {
+    --p-listbox-option-hover-background: #edeff6;
+    --p-listbox-option-active-background: #edeff6;
+    --p-listbox-option-focus-background: #edeff6;
+    --p-listbox-option-selected-background: #edeff6;
+  }
+}

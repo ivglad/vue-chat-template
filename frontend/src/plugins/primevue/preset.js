@@ -59,9 +59,9 @@ const Preset = definePreset(Aura, {
         disabled: {
           color: '{surface.300}',
         },
-        fontSize: '1.4rem',
-        fontSizeSm: '1.2rem',
-        fontSizeLg: '1.6rem',
+        fontSize: '1rem',
+        fontSizeSm: '0.875rem',
+        fontSizeLg: '1.25rem',
       },
     },
     /**
@@ -385,7 +385,7 @@ const Preset = definePreset(Aura, {
       shadow: 'none',
     },
     disabledOpacity: '0.6',
-    iconSize: '2rem',
+    iconSize: '1.25rem',
     anchorGutter: '2px',
     formField: {
       paddingX: '1rem',

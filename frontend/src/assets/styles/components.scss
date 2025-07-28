@@ -39,6 +39,11 @@
       opacity: 0;
       pointer-events: none;
     }
+    &:has(input:focus) {
+      label {
+        inset-inline-start: 0;
+      }
+    }
     &:has(input:not(:focus)):has(&-message.p-message-error) {
       label {
         opacity: 0;
