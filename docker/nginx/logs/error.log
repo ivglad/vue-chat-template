@@ -247,3 +247,19 @@
 2025/07/27 04:32:31 [notice] 1#1: start worker process 32
 2025/07/27 04:32:31 [notice] 1#1: start worker process 33
 2025/07/27 04:32:31 [notice] 1#1: start worker process 34
+2025/07/28 04:58:11 [notice] 1#1: using the "epoll" event method
+2025/07/28 04:58:11 [notice] 1#1: nginx/1.25.5
+2025/07/28 04:58:11 [notice] 1#1: built by gcc 13.2.1 20231014 (Alpine 13.2.1_git20231014) 
+2025/07/28 04:58:11 [notice] 1#1: OS: Linux 5.15.153.1-microsoft-standard-WSL2
+2025/07/28 04:58:11 [notice] 1#1: getrlimit(RLIMIT_NOFILE): 1048576:1048576
+2025/07/28 04:58:11 [notice] 1#1: start worker processes
+2025/07/28 04:58:11 [notice] 1#1: start worker process 29
+2025/07/28 04:58:11 [notice] 1#1: start worker process 30
+2025/07/28 04:58:11 [notice] 1#1: start worker process 31
+2025/07/28 04:58:11 [notice] 1#1: start worker process 32
+2025/07/28 04:58:11 [notice] 1#1: start worker process 33
+2025/07/28 04:58:11 [notice] 1#1: start worker process 34
+2025/07/28 09:55:14 [error] 32#32: *4786 recv() failed (104: Connection reset by peer) while reading response header from upstream, client: 172.22.0.1, server: , request: "GET / HTTP/1.1", upstream: "http://172.22.0.2:5173/", host: "localhost:8001"
+2025/07/28 10:20:04 [warn] 34#34: *5542 an upstream response is buffered to a temporary file /var/cache/nginx/proxy_temp/1/00/0000000001 while reading upstream, client: 172.22.0.1, server: , request: "GET /fonts/Inter-VariableFont_opsz,wght.woff2 HTTP/1.1", upstream: "http://172.22.0.2:5173/fonts/Inter-VariableFont_opsz,wght.woff2", host: "localhost:8001", referrer: "http://localhost:8001/chat"
+2025/07/28 12:09:16 [error] 34#34: *8186 connect() failed (111: Connection refused) while connecting to upstream, client: 172.22.0.1, server: , request: "GET / HTTP/1.1", upstream: "http://172.22.0.2:5173/", host: "localhost:8001"
+2025/07/28 12:09:56 [error] 30#30: *9911 connect() failed (111: Connection refused) while connecting to upstream, client: 172.22.0.1, server: , request: "GET / HTTP/1.1", upstream: "http://172.22.0.2:5173/", host: "localhost:8001"

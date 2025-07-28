@@ -2,66 +2,6 @@
 @use '@/assets/styles/mixins' as *;
 
 @layer app {
-  // Offsets
-  // Из расчета 1rem = 10px - зависит от размера шрифта html
-  @for $i from 0 through 120 {
-    @if $i % 5 == 0 {
-      // To rem
-      $value: calc($i / 10);
-      .p-#{$i} {
-        padding: #{$value}rem;
-      }
-      .pt-#{$i} {
-        padding-top: #{$value}rem;
-      }
-      .pb-#{$i} {
-        padding-bottom: #{$value}rem;
-      }
-      .pl-#{$i} {
-        padding-left: #{$value}rem;
-      }
-      .pr-#{$i} {
-        padding-right: #{$value}rem;
-      }
-      .ptb-#{$i} {
-        padding-top: #{$value}rem;
-        padding-bottom: #{$value}rem;
-      }
-      .plr-#{$i} {
-        padding-left: #{$value}rem;
-        padding-right: #{$value}rem;
-      }
-
-      .m-#{$i} {
-        margin: #{$value}rem;
-      }
-      .mt-#{$i} {
-        margin-top: #{$value}rem;
-      }
-      .mb-#{$i} {
-        margin-bottom: #{$value}rem;
-      }
-      .ml-#{$i} {
-        margin-left: #{$value}rem;
-      }
-      .mr-#{$i} {
-        margin-right: #{$value}rem;
-      }
-      .mtb-#{$i} {
-        margin-top: #{$value}rem;
-        margin-bottom: #{$value}rem;
-      }
-      .mlr-#{$i} {
-        margin-left: #{$value}rem;
-        margin-right: #{$value}rem;
-      }
-    }
-  }
-
-  .pe-none {
-    pointer-events: none;
-  }
-
   * {
     scroll-behavior: smooth;
   }
@@ -80,7 +20,7 @@
   }
   ::-webkit-scrollbar-thumb {
     border-radius: 0.6rem;
-    border: 0.3rem solid transparent;
+    border: 0.45rem solid transparent;
     background-clip: padding-box;
     background-color: var(--p-primary-400);
     &:hover {
@@ -97,8 +37,8 @@
   }
 
   // html {
-    // font-size: 62.5%;
-    // font-size: 14px;
+  // font-size: 62.5%;
+  // font-size: 14px;
   // }
 
   body {

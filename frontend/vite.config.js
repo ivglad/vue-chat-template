@@ -38,9 +38,9 @@ export default defineConfig({
         }
       },
       transform(svg, collection, icon) {
-        if (collection === 'custom') {
+        if (collection === 'custom' && !icon.includes('-original')) {
           // Transform svg fill/stroke color
-          svg = svg.replace(/(fill|stroke)="#8769A9"/g, '$1="currentColor"')
+          svg = svg.replace(/(fill|stroke)=".+"/g, '$1="currentColor"')
         }
         return svg
       },
