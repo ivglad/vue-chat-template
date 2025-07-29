@@ -5,12 +5,12 @@ const router = useRouter()
 const toast = useToast()
 
 const initialValues = ref({
-  username: '',
+  email: '',
   password: '',
   remember: false,
 })
 const loginSchema = z.object({
-  username: z.string().trim().min(3, { message: 'Минимум 3 символа' }),
+  email: z.string().trim().email({ message: 'Введите корректный email' }),
   password: z
     .string()
     .trim()
@@ -29,20 +29,20 @@ const { mutate: loginUserMutation, isPending: loginUserIsPending } =
   useLoginUser()
 const loginSubmit = async (e) => {
   if (!e.valid) return
-  const { username, password } = e.values
+  const { email, password } = e.states
   loginUserMutation(
     {
-      username,
-      password,
+      email: email.value,
+      password: password.value,
     },
     {
       onError: (error) => {
-        e.states.username.valid = false
-        e.states.username.invalid = true
+        e.states.email.valid = false
+        e.states.email.invalid = true
         e.states.password.valid = false
         e.states.password.invalid = true
         // Для добавления сообщения об ошибке в tooltip поля
-        // e.states.username.error = {
+        // e.states.email.error = {
         //   message: error?.response?.data?.message,
         // }
 
@@ -54,12 +54,16 @@ const loginSubmit = async (e) => {
         })
       },
       onSuccess: (data) => {
-        const userData = data.data
+        const { user, token } = data.data.data
+        // Объединяем данные пользователя с токеном
+        const userData = {
+          ...user,
+          accessToken: token,
+        }
         userStore.initUser(userData)
-      },
-      // FIXME: remove in real app
-      onSettled: (data, error, variables, context) => {
-        // router.push('/ui')
+
+        // Перенаправляем на страницу чата
+        router.push('/chat')
       },
     },
   )
@@ -79,10 +83,10 @@ const loginSubmit = async (e) => {
         v-slot="$field"
         :validateOnValueUpdate="false"
         validateOnBlur
-        name="username">
+        name="email">
         <FloatLabel class="app-input text-base">
           <InputText
-            id="auth-form-username"
+            id="auth-form-email"
             v-tooltip.top="{
               value: $field.error?.message,
               showDelay: 500,
@@ -98,7 +102,7 @@ const loginSubmit = async (e) => {
             v-if="$field?.invalid && $field.error?.message">
             {{ $field.error?.message }}
           </Message>
-          <label for="auth-form-username" class="text-sm">Логин</label>
+          <label for="auth-form-email" class="text-sm">Email</label>
         </FloatLabel>
       </FormField>
       <FormField

@@ -8,6 +8,11 @@ const routes = [
     component: () => import('@/views/Error.vue'),
   },
   {
+    path: '/',
+    name: 'Чат',
+    component: () => import('@/views/Chat.vue'),
+  },
+  {
     path: '/auth',
     name: 'Вход и регистрация',
     component: () => import('@/views/Auth.vue'),
@@ -35,15 +40,15 @@ const authMiddleware = (to, next, userStore) => {
     userInLocalStorage = JSON.parse(localStorage.getItem('user'))
   } catch (e) {}
 
-  if (!userInLocalStorage?.role && userStore.user) {
+  if (!userInLocalStorage?.accessToken && userStore.user) {
     userStore.resetUser()
   }
   if (!userStore.user && to.path !== '/auth') {
     next('/auth')
     return false
   }
-  if (userStore.user && to.path === '/auth') {
-    next('/')
+  if (userStore.user && (to.path === '/auth' || to.path === '/')) {
+    next('/chat')
     return false
   }
   return true
@@ -62,8 +67,8 @@ const errorMiddleware = (to, next, user) => {
 const middlewarePipeline = (context) => {
   const { to, from, next, userStore } = context
   // Enable after authorization is implemented ---------------------->
-  // if (!authMiddleware(to, next, userStore)) return false
-  // if (!errorMiddleware(to, next, userStore.user)) return false
+  if (!authMiddleware(to, next, userStore)) return false
+  if (!errorMiddleware(to, next, userStore.user)) return false
   // Enable after authorization is implemented ----------------------<
   return true
 }

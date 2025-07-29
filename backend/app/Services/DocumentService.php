@@ -1,0 +1,299 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Document;
+use App\Models\DocumentEmbedding;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Pgvector\Laravel\Vector;
+use Pgvector\Laravel\Distance;
+use App\Jobs\GenerateChunkEmbedding;
+
+class DocumentService
+{
+    private YandexGptService $yandexGptService;
+
+    public function __construct(YandexGptService $yandexGptService)
+    {
+        $this->yandexGptService = $yandexGptService;
+    }
+
+    /**
+     * Разбивает текст на чанки заданного размера с учетом перекрытия и завершением на конце предложения.
+     *
+     * Метод принимает входной текст и разбивает его на части (чанки) определенной длины,
+     * стараясь завершить каждый чанк на конце предложения (после точки, восклицательного или
+     * вопросительного знака). Также поддерживается перекрытие между чанками, чтобы сохранить
+     * контекст. Пустые или слишком короткие чанки (менее 50 символов) отфильтровываются.
+     *
+     * @param string $text Входной текст для разбиения.
+     * @param int $chunkSize Максимальный размер чанка в символах (по умолчанию 1000).
+     * @param int $overlap Размер перекрытия между чанками в символах (по умолчанию 200).
+     * @return array Массив чанков текста, отфильтрованный по минимальной длине.
+     */
+    public function splitTextIntoChunks(string $text, int $chunkSize = 1000, int $overlap = 200): array
+    {
+        // Инициализация массива для хранения чанков
+        $chunks = [];
+        
+        // Получение длины текста в символах с учетом многобайтовых кодировок (например, UTF-8)
+        $textLength = mb_strlen($text);
+        
+        // Начальная позиция для разбиения текста
+        $start = 0;
+
+        // Цикл продолжается, пока не достигнут конец текста
+        while ($start < $textLength) {
+            // Определение предполагаемого конца текущего чанка
+            $end = min($start + $chunkSize, $textLength);
+            
+            // Если конец чанка не совпадает с концом текста, пытаемся найти ближайший конец предложения
+            if ($end < $textLength) {
+                // Ищем ближайшую точку в диапазоне ±100 символов от предполагаемого конца чанка
+                $nextDot = mb_strpos($text, '.', $end - 100);
+                // Ищем ближайший восклицательный знак в том же диапазоне
+                $nextExclamation = mb_strpos($text, '!', $end - 100);
+                // Ищем ближайший вопросительный знак в том же диапазоне
+                $nextQuestion = mb_strpos($text, '?', $end - 100);
+                
+                // Находим максимальную позицию конца предложения (если найдено)
+                $sentenceEnd = max($nextDot, $nextExclamation, $nextQuestion);
+                
+                // Если конец предложения найден и находится в пределах ±100 символов от предполагаемого конца,
+                // корректируем конец чанка, чтобы включить символ конца предложения
+                if ($sentenceEnd !== false && $sentenceEnd < $end + 100) {
+                    $end = $sentenceEnd + 1;
+                }
+            }
+            
+            // Извлекаем подстроку (чанк) от начальной позиции до конечной
+            $chunk = mb_substr($text, $start, $end - $start);
+            
+            // Удаляем лишние пробелы в начале и конце чанка
+            $chunks[] = trim($chunk);
+            
+            // Обновляем начальную позицию для следующего чанка, учитывая перекрытие
+            // Перекрытие позволяет сохранить контекст между чанками
+            $start = max($start + $chunkSize - $overlap, $end);
+        }
+
+        // Фильтруем чанки, оставляя только те, длина которых больше 50 символов
+        // Это предотвращает включение слишком коротких фрагментов
+        return array_filter($chunks, fn($chunk) => mb_strlen(trim($chunk)) > 50);
+    }
+
+    /**
+     * Извлекает текст из файла в формате PDF, DOCX или DOC.
+     *
+     * Метод принимает путь к файлу и определяет его формат по расширению. Затем использует
+     * соответствующие библиотеки для извлечения текста. Поддерживаются файлы PDF, DOCX и DOC.
+     * Для DOC-файлов предполагается, что они могут быть конвертированы в DOCX или обработаны
+     * через сторонние сервисы, так как прямое извлечение текста из DOC сложнее.
+     *
+     * @param string $filePath Путь к файлу (PDF, DOCX или DOC).
+     * @return string|null Извлеченный текст или null в случае ошибки.
+     */
+    public function extractTextFromFile(string $filePath): ?string
+    {
+        try {
+            // Проверяем, существует ли файл
+            if (!file_exists($filePath)) {
+                Log::error("File not found: {$filePath}");
+                return null;
+            }
+
+            // Получаем расширение файла
+            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+
+            switch ($extension) {
+                case 'txt':
+                    // Извлечение текста из TXT
+                    $text = file_get_contents($filePath);
+                    Log::info("TXT text extracted: " . ($text ? substr($text, 0, 100) : 'Empty'));
+                    return $text ?: null;
+                case 'pdf':
+                    // Извлечение текста из PDF с использованием smalot/pdfparser
+                    $parser = new \Smalot\PdfParser\Parser();
+                    $pdf = $parser->parseFile($filePath);
+                    $text = $pdf->getText();
+                    return $text ?: null;
+
+                case 'docx':
+                    // Извлечение текста из DOCX с использованием phpword
+                    $phpWord = \PhpOffice\PhpWord\IOFactory::load($filePath);
+                    $text = '';
+                    foreach ($phpWord->getSections() as $section) {
+                        foreach ($section->getElements() as $element) {
+                            if (method_exists($element, 'getText')) {
+                                $text .= $element->getText() . "\n";
+                            }
+                        }
+                    }
+                    return $text ?: null;
+
+                case 'doc':
+                    // Проверяем наличие LibreOffice
+                    if (shell_exec('which soffice')) {
+                        Log::info("Using LibreOffice for DOC conversion: {$filePath}");
+                        // Формируем имя выходного файла на основе входного
+                        $fileNameWithoutExt = pathinfo($filePath, PATHINFO_FILENAME);
+                        $tempDocxPath = sys_get_temp_dir() . '/' . $fileNameWithoutExt . '.docx';
+                        $command = "soffice --headless --convert-to docx --outdir " . escapeshellarg(sys_get_temp_dir()) . " " . escapeshellarg($filePath) . " 2>&1";
+                        Log::info("Executing DOC conversion command: {$command}");
+                        exec($command, $output, $returnVar);
+
+                        // Даем небольшой таймаут для завершения конвертации
+                        sleep(1);
+
+                        if ($returnVar === 0 && file_exists($tempDocxPath)) {
+                            $phpWord = \PhpOffice\PhpWord\IOFactory::load($tempDocxPath);
+                            $text = '';
+                            foreach ($phpWord->getSections() as $section) {
+                                foreach ($section->getElements() as $element) {
+                                    if (method_exists($element, 'getText')) {
+                                        $text .= $element->getText() . "\n";
+                                    }
+                                }
+                            }
+                            unlink($tempDocxPath); // Удаляем временный файл
+                            Log::info("DOC text extracted via LibreOffice: " . ($text ? substr($text, 0, 100) : 'Empty'));
+                            return $text ? mb_convert_encoding($text, 'UTF-8', 'UTF-8') : null;
+                        } else {
+                            Log::error("Failed to convert DOC to DOCX: {$filePath}, Return code: {$returnVar}, Output: " . implode("\n", $output));
+                        }
+                    } else {
+                        Log::warning("LibreOffice not installed, attempting alternative DOC extraction: {$filePath}");
+                        // Альтернативный метод: использование antiword (если доступно)
+                        if (shell_exec('which antiword')) {
+                            $command = "antiword " . escapeshellarg($filePath) . " 2>&1";
+                            Log::info("Executing antiword command: {$command}");
+                            exec($command, $output, $returnVar);
+                            if ($returnVar === 0) {
+                                $text = implode("\n", $output);
+                                Log::info("DOC text extracted via antiword: " . ($text ? substr($text, 0, 100) : 'Empty'));
+                                return $text ? mb_convert_encoding($text, 'UTF-8', 'UTF-8') : null;
+                            } else {
+                                Log::error("Failed to extract DOC with antiword: {$filePath}, Return code: {$returnVar}, Output: " . implode("\n", $output));
+                            }
+                        } else {
+                            Log::error("No DOC extraction tools available (LibreOffice or antiword): {$filePath}");
+                        }
+                    }
+                    return null;
+
+                default:
+                    Log::error("Unsupported file format: {$extension}");
+                    return null;
+            }
+        } catch (\Exception $e) {
+            Log::error("Error extracting text from file {$filePath}: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Генерация эмбеддингов для документа
+     */
+    public function generateEmbeddingsForDocument(Document $document): bool
+    {
+        try {
+            // Очищаем старые эмбеддинги
+            $document->embeddings()->delete();
+
+            $content = $document->content;
+            if (!$content && $document->file_path) {
+                $content = $this->extractTextFromFile($document->file_path);
+                if ($content) {
+                    $document->update(['content' => $content]);
+                }
+            }
+
+            if (!$content) {
+                Log::warning("No content found for document {$document->id}");
+                $document->update(['processing_status' => 'failed']);
+                return false;
+            }
+
+            // Устанавливаем статус обработки
+            $document->update([
+                'processing_status' => 'processing',
+                'embeddings_generated' => false
+            ]);
+
+            // Разбиваем на чанки
+            $chunks = $this->splitTextIntoChunks($content);
+
+            foreach ($chunks as $index => $chunk) {
+                GenerateChunkEmbedding::dispatch($document->id, $index, $chunk)
+                    ->delay(now()->addMilliseconds(1000 * $index));
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            Log::error('Error generating embeddings for document: ' . $e->getMessage());
+            $document->update(['processing_status' => 'failed']);
+            return false;
+        }
+    }
+
+    /**
+     * Поиск релевантных чанков для вопроса с использованием pgvector
+     */
+    public function findRelevantChunks(array $documentIds, string $question, int $limit = 5): array
+    {
+        $questionEmbedding = $this->yandexGptService->generateEmbeddings($question);
+        
+        if (!$questionEmbedding) {
+            return [];
+        }
+
+        $questionVector = new Vector($questionEmbedding);
+
+        // Используем pgvector для быстрого поиска ближайших соседей
+        $nearestChunks = DocumentEmbedding::query()
+            ->whereIn('document_id', $documentIds)
+            ->whereNotNull('embedding_vector')
+            ->nearestNeighbors('embedding_vector', $questionVector, Distance::Cosine)
+            ->take($limit)
+            ->get();
+
+        $results = [];
+        foreach ($nearestChunks as $chunk) {
+            $results[] = [
+                'chunk' => $chunk->chunk_text,
+                'similarity' => 1 - $chunk->neighbor_distance, // Переводим cosine distance в similarity
+                'document_id' => $chunk->document_id,
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * Ответ на вопрос по документам пользователя
+     */
+    public function answerQuestion(int $userId, string $question): ?string
+    {
+        // Получаем документы пользователя
+        $documents = Document::where('user_id', $userId)
+            ->where('embeddings_generated', true)
+            ->get();
+
+        if ($documents->isEmpty()) {
+            return "У вас нет загруженных документов с обработанными эмбеддингами.";
+        }
+
+        $documentIds = $documents->pluck('id')->toArray();
+        $relevantChunks = $this->findRelevantChunks($documentIds, $question);
+
+        if (empty($relevantChunks)) {
+            return "Не удалось найти релевантную информацию в ваших документах.";
+        }
+
+        // Формируем контекст из найденных чанков
+        $context = implode("\n\n", array_map(fn($chunk) => $chunk['chunk'], $relevantChunks));
+
+        return $this->yandexGptService->generateResponse($context, $question);
+    }
+} 

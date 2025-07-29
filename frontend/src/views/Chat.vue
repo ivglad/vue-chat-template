@@ -1,32 +1,51 @@
 <script setup>
+import { ref, computed, provide } from 'vue'
+import { useChatHistory } from '@/helpers/api/queries'
+
+const { data: chatData, isLoading } = useChatHistory({ limit: 50 })
+
+// Локальные сообщения для мгновенного отображения
+const localMessages = ref([])
+
+// Объединяем сообщения от сервера и локальные
 const messagesHistory = computed(() => {
-  return [
-    {
-      id: 1,
-      message: 'Кратко изложи регламент отдела логистики',
-      type: 'user',
-      context_documents: [{ id: 1, name: 'Регламент отдела логистики' }],
-      created_at: '2023-12-01T10:00:00.000000Z',
-      replies: [
-        {
-          id: 2,
-          message:
-            'Регламент отдела логистики включает в себя управление поставками, транспортировкой и складским хозяйством с целью оптимизации затрат и обеспечения своевременной доставки товаров. \nОтдел также отвечает за анализ эффективности процессов, взаимодействие с другими подразделениями и соблюдение нормативных требований',
-          type: 'bot',
-          context_documents: [{ id: 1, name: 'Регламент отдела логистики' }],
-          created_at: '2023-12-01T10:00:05.000000Z',
-        },
-      ],
-    },
-  ]
+  const serverMessages = chatData.value?.messages || []
+  return [...serverMessages, ...localMessages.value]
 })
+
+// Функция для добавления локального сообщения
+const addLocalMessage = (messageData) => {
+  const newMessage = {
+    id: `local_${Date.now()}`,
+    type: 'user',
+    message: messageData.message,
+    context_documents: messageData.document_ids
+      ? messageData.document_ids.map((id) => ({ id, name: `Документ ${id}` }))
+      : null,
+    replies: [],
+    created_at: new Date().toISOString(),
+    isLocal: true, // флаг что это локальное сообщение
+  }
+
+  localMessages.value.push(newMessage)
+  return newMessage
+}
+
+// Функция для очистки локальных сообщений после синхронизации
+const clearLocalMessages = () => {
+  localMessages.value = []
+}
+
+// Предоставляем функции дочерним компонентам
+provide('addLocalMessage', addLocalMessage)
+provide('clearLocalMessages', clearLocalMessages)
 </script>
 
 <template>
-  <div class="flex flex-col flex-1">
+  <div class="flex flex-col h-screen overflow-hidden">
     <ChatHeader />
-    <ChatContent :messages-history="messagesHistory" />
-    <ChatFooter v-model:messages-history="messagesHistory" />
+    <ChatContent :messages-history="messagesHistory" :is-loading="isLoading" />
+    <ChatFooter />
   </div>
 </template>
 

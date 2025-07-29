@@ -1,17 +1,37 @@
+import axios from 'axios'
+import { useUserStore } from '@/store/userStore'
+import router from '@/router'
+
 const api = axios.create({
   withCredentials: true,
 })
 
 export const apiLoginUser = async (data) => {
-  return await api.post('/api/login', data)
+  return await api.post('/api/v1/auth/login', data)
 }
 
 export const apiLogoutUser = async () => {
-  return await api.get('/api/logout')
+  return await api.post('/api/v1/auth/logout')
 }
 
 export const apiRefreshUser = async () => {
-  return await api.get('/api/refresh')
+  return await api.get('/api/v1/auth/user')
+}
+
+export const apiGetChatHistory = async (params) => {
+  return await api.get('/api/v1/chat/history', { params })
+}
+
+export const apiSendChatMessage = async (data) => {
+  return await api.post('/api/v1/chat/send', data)
+}
+
+export const apiClearChatHistory = async () => {
+  return await api.post('/api/v1/chat/clear')
+}
+
+export const apiGetDocuments = async (params) => {
+  return await api.get('/api/v1/documents', { params })
 }
 
 // ----------------------------------------------------------------------------
@@ -79,8 +99,8 @@ api.interceptors.response.use(
     // For unauthorized requests with only access token
     // ------------------------------------------------------------------------
     if (error.response.status == 401) {
-      if (api.router?.currentRoute?.value?.path !== '/auth') {
-        api?.router?.push({ path: '/auth' })
+      if (router.currentRoute.value?.path !== '/auth') {
+        router.push({ path: '/auth' })
       }
       const userStore = useUserStore()
       userStore.resetUser()

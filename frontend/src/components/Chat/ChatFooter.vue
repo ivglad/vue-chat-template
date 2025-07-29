@@ -1,34 +1,87 @@
 <script setup>
+import { ref, computed, inject } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import { onClickOutside } from '@vueuse/core'
+// import { useSendChatMessage, useDocuments } from '@/helpers/api/queries'
 
-const messagesHistory = defineModel('messagesHistory')
-console.log(messagesHistory.value)
+const { mutate: sendMessage, isPending } = useSendChatMessage()
+const { data: documentsData } = useDocuments({ per_page: 100 })
+
+// Получаем функции для работы с локальными сообщениями
+const addLocalMessage = inject('addLocalMessage')
+const clearLocalMessages = inject('clearLocalMessages')
 
 const message = ref('')
 
 const documentsMenu = ref()
 const documentsMenuRef = ref()
-const documents = ref([
-  { label: 'Регламенты компании' },
-  { label: 'Документы сотрудников' },
-  { label: 'Документы клиентов' },
-  { label: 'Документы партнеров' },
-  { label: 'Документы сотрудников 1' },
-  { label: 'Правила ведения документации' },
-  { label: 'Регламенты для управления документацией' },
-  { label: 'Регламенты для управления документацией 1' },
-])
-const selectedDocument = ref(null)
+
+const documents = computed(() => {
+  return (
+    documentsData.value?.documents?.map((doc) => ({
+      label: doc.title,
+      id: doc.id,
+    })) || []
+  )
+})
+
+const selectedDocuments = ref([])
 
 // Закрытие меню при клике вне области
 onClickOutside(documentsMenuRef, () => {
   documentsMenu.value = false
 })
+
+const removeDocument = (documentId) => {
+  selectedDocuments.value = selectedDocuments.value.filter(
+    (doc) => doc.id !== documentId,
+  )
+}
+
+const handleSendMessage = () => {
+  if (!message.value.trim() || isPending.value) return
+
+  const messageData = {
+    message: message.value.trim(),
+  }
+
+  // Если выбраны документы, добавляем их IDs
+  if (selectedDocuments.value.length > 0) {
+    messageData.document_ids = selectedDocuments.value.map((doc) => doc.id)
+  }
+
+  // Сразу добавляем сообщение локально для мгновенного отображения
+  addLocalMessage(messageData)
+
+  // Очищаем форму
+  message.value = ''
+  selectedDocuments.value = []
+
+  // Отправляем на сервер
+  sendMessage(messageData, {
+    onSuccess: () => {
+      // После успешной отправки очищаем локальные сообщения
+      // Реальный ответ от сервера заменит локальное сообщение
+      clearLocalMessages()
+    },
+    onError: (error) => {
+      console.error('Ошибка отправки сообщения:', error)
+      // При ошибке убираем локальное сообщение
+      clearLocalMessages()
+    },
+  })
+}
+
+const handleKeydown = (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    handleSendMessage()
+  }
+}
 </script>
 
 <template>
-  <div class="flex w-full items-center justify-center relative px-6 py-4">
+  <div class="flex w-full items-center justify-center relative px-6 pt-0 pb-4">
     <AnimatePresence>
       <motion.div
         v-if="documentsMenu"
@@ -40,14 +93,16 @@ onClickOutside(documentsMenuRef, () => {
           duration: 0.15,
           ease: 'easeOut',
         }"
-        class="absolute bottom-full left-6 z-10">
+        class="w-fit absolute bottom-full left-6 z-10">
         <Listbox
-          v-model="selectedDocument"
+          v-model="selectedDocuments"
           :options="documents"
+          multiple
           optionLabel="label"
-          class="max-w-[250px] border-none shadow-none rounded-2xl"
+          listStyle="max-height:250px"
+          class="w-[280px] max-w-[280px] border-none shadow-lg rounded-2xl"
           :pt="{
-            list: 'pl-2.5 pr-0 overflow-hidden',
+            list: 'p-2.5 overflow-hidden',
             option: 'block rounded-xl text-nowrap text-ellipsis',
           }"
           @change="documentsMenu = false" />
@@ -58,9 +113,11 @@ onClickOutside(documentsMenuRef, () => {
       layout
       :transition="{ duration: 0.3, ease: 'easeOut' }"
       class="flex flex-col w-full items-center justify-center gap-2.5 bg-surface-0 min-h-[54px] rounded-2xl p-2">
+      <!-- Показываем все выбранные документы -->
       <AnimatePresence>
         <motion.div
-          v-if="selectedDocument"
+          v-for="document in selectedDocuments"
+          :key="document.id"
           layout
           :initial="{ opacity: 0, scale: 0.98 }"
           :animate="{ opacity: 1, scale: 1 }"
@@ -70,14 +127,14 @@ onClickOutside(documentsMenuRef, () => {
             ease: 'easeOut',
           }"
           class="flex items-center gap-2.5 w-full p-3 rounded-xl bg-[#EDEFF6]">
-          <i-custom-doc class="text-primary" />
-          <div>
-            {{ selectedDocument?.label }}
+          <i-custom-doc class="text-primary flex-shrink-0" />
+          <div class="text-sm text-nowrap text-ellipsis overflow-hidden">
+            {{ document.label }}
           </div>
           <Button
-            class="p-0 ml-auto"
+            class="p-0 ml-auto flex-shrink-0"
             variant="text"
-            @click="selectedDocument = null">
+            @click="removeDocument(document.id)">
             <template #icon>
               <i-custom-cross />
             </template>
@@ -102,13 +159,19 @@ onClickOutside(documentsMenuRef, () => {
           id="message-textarea"
           class="h-full px-2 py-2 border-none shadow-none"
           placeholder="Задайте вопрос..."
-          rows="1" />
+          rows="1"
+          :disabled="isPending"
+          @keydown="handleKeydown" />
         <Button
-          :disabled="!message"
+          :disabled="!message || isPending"
           class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl"
-          aria-label="plus">
+          aria-label="send"
+          @click="handleSendMessage">
           <template #icon>
-            <i-custom-send />
+            <div
+              v-if="isPending"
+              class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            <i-custom-send v-else />
           </template>
         </Button>
       </div>

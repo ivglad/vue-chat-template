@@ -7,15 +7,18 @@ services:
     restart: unless-stopped
     tty: true
     volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
       - ./docker/nginx/logs:/var/log/nginx
+      - ./backend:/var/www/backend
     ports:
       - ${HOST_FRONTEND_PORT}:80
     env_file:
       - ./.env
     networks:
-      - frontend-network
+      - app-network
     depends_on:
       - frontend
+      - backend
     logging:
       driver: "json-file"
       options:
@@ -26,6 +29,24 @@ services:
         limits:
           cpus: "1"
           memory: 1G
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    command: >
+      sh -c "ln -sf /dev/stdout /var/log/nginx/access.log &&
+             ln -sf /dev/stderr /var/log/nginx/error.log &&
+             nginx -g 'daemon off;'"
 
   frontend:
     build:
@@ -39,7 +60,7 @@ services:
     env_file:
       - ./frontend/.env
     networks:
-      - frontend-network
+      - app-network
     logging:
       driver: "json-file"
       options:
@@ -51,9 +72,83 @@ services:
           cpus: "1"
           memory: 2G
 
+  backend:
+    build:
+      context: .
+      dockerfile: ./docker/backend/Dockerfile
+    container_name: backend-${DOCKER_PROJECT_NAME:-default}
+    restart: unless-stopped
+    volumes:
+      - ./backend:/var/www/backend
+      - backend_vendor:/var/www/backend/vendor
+      - documents_storage:/var/www/backend/storage/app/documents
+    env_file:
+      - ./backend/.env
+    networks:
+      - app-network
+    depends_on:
+      - database
+      - redis
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 3G
+
+  database:
+    image: pgvector/pgvector:0.8.0-pg17
+    container_name: database-${DOCKER_PROJECT_NAME:-default}
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-docwise}
+      POSTGRES_USER: ${DB_USERNAME:-docwise}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-${DOCKER_PROJECT_NAME:-default}
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
 volumes:
   frontend_dependencies:
+  backend_vendor:
+  postgres_data:
+  redis_data:
+  documents_storage:
 
 networks:
-  frontend-network:
+  app-network:
     driver: bridge
