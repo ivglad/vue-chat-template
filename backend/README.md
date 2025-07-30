@@ -122,13 +122,16 @@ php artisan migrate
 
 ```bash
 # Если используете Docker, выполните в контейнере:
-docker exec backend-vue-chat-template /var/www/backend/fix-permissions.sh
+docker exec backend-vue-chat-template /usr/local/bin/entrypoint.sh fix-permissions
 
-# Или вручную:
-docker exec backend-vue-chat-template chown -R www-data:www-data /var/www/backend/storage
-docker exec backend-vue-chat-template chown -R www-data:www-data /var/www/backend/bootstrap/cache
-docker exec backend-vue-chat-template chmod -R 775 /var/www/backend/storage
-docker exec backend-vue-chat-template chmod -R 775 /var/www/backend/bootstrap/cache
+# Проверка прав доступа:
+docker exec backend-vue-chat-template /usr/local/bin/entrypoint.sh check-permissions
+
+# Health check:
+docker exec backend-vue-chat-template /usr/local/bin/entrypoint.sh health-check
+
+# Создание админ пользователя:
+docker exec backend-vue-chat-template /usr/local/bin/entrypoint.sh create-admin
 ```
 
 9. **Создайте пользователя админа:**

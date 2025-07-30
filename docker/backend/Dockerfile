@@ -16,7 +16,9 @@ RUN apk add --no-cache \
     autoconf \
     gcc \
     g++ \
-    make
+    make \
+    bash \
+    expect
 
 RUN docker-php-ext-install \
     pdo_pgsql \
@@ -44,13 +46,26 @@ COPY ./backend .
 
 RUN npm install && npm run build
 
+# Делаем скрипты исполняемыми (если они существуют)
+RUN chmod +x /var/www/backend/fix-permissions.sh || echo "fix-permissions.sh not found, skipping"
+RUN chmod +x /var/www/backend/check-permissions.sh || echo "check-permissions.sh not found, skipping"
+
+# Устанавливаем базовые права доступа для Laravel
 RUN chown -R www-data:www-data /var/www/backend/storage /var/www/backend/bootstrap/cache
 RUN chmod -R 775 /var/www/backend/storage /var/www/backend/bootstrap/cache
 
+# Install netcat for database health checks
+RUN apk add --no-cache netcat-openbsd
+
+# Copy configuration files
 COPY docker/backend/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY docker/backend/init.sh /usr/local/bin/init.sh
-RUN chmod +x /usr/local/bin/init.sh
+COPY docker/backend/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Make entrypoint executable
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 EXPOSE 9000
 
-CMD ["/usr/local/bin/init.sh"] 
+# Use modern entrypoint pattern
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"] 
