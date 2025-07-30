@@ -2,7 +2,8 @@
 import { ref, computed, inject } from 'vue'
 import { motion, AnimatePresence } from 'motion-v'
 import { onClickOutside } from '@vueuse/core'
-// import { useSendChatMessage, useDocuments } from '@/helpers/api/queries'
+
+const toast = useToast()
 
 const { mutate: sendMessage, isPending } = useSendChatMessage()
 const { data: documentsData } = useDocuments({ per_page: 100 })
@@ -45,29 +46,30 @@ const handleSendMessage = () => {
     message: message.value.trim(),
   }
 
-  // Если выбраны документы, добавляем их IDs
+  // Если выбраны документы, добавляем их полную информацию
   if (selectedDocuments.value.length > 0) {
     messageData.document_ids = selectedDocuments.value.map((doc) => doc.id)
+    messageData.documents = selectedDocuments.value // Передаем полную информацию
   }
 
   // Сразу добавляем сообщение локально для мгновенного отображения
   addLocalMessage(messageData)
 
-  // Очищаем форму
+  // Очищаем только текст сообщения, документы остаются выбранными
   message.value = ''
-  selectedDocuments.value = []
+  // selectedDocuments.value = [] // Не очищаем, чтобы документы оставались приложенными
 
   // Отправляем на сервер
   sendMessage(messageData, {
-    onSuccess: () => {
-      // После успешной отправки очищаем локальные сообщения
-      // Реальный ответ от сервера заменит локальное сообщение
-      clearLocalMessages()
-    },
+    onSuccess: () => {},
     onError: (error) => {
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error?.response?.data?.message,
+        life: 5000,
+      })
       console.error('Ошибка отправки сообщения:', error)
-      // При ошибке убираем локальное сообщение
-      clearLocalMessages()
     },
   })
 }
@@ -77,6 +79,10 @@ const handleKeydown = (event) => {
     event.preventDefault()
     handleSendMessage()
   }
+}
+
+const documentsMenuHandler = () => {
+  documentsMenu.value = !documentsMenu.value
 }
 </script>
 
@@ -93,14 +99,14 @@ const handleKeydown = (event) => {
           duration: 0.15,
           ease: 'easeOut',
         }"
-        class="w-fit absolute bottom-full left-6 z-10">
+        class="w-fit absolute bottom-[calc(100%+1rem)] left-6 z-10">
         <Listbox
           v-model="selectedDocuments"
           :options="documents"
           multiple
           optionLabel="label"
           listStyle="max-height:250px"
-          class="w-[280px] max-w-[280px] border-none shadow-lg rounded-2xl"
+          class="w-[280px] max-w-[280px] border-none rounded-2xl"
           :pt="{
             list: 'p-2.5 overflow-hidden',
             option: 'block rounded-xl text-nowrap text-ellipsis',
@@ -113,7 +119,6 @@ const handleKeydown = (event) => {
       layout
       :transition="{ duration: 0.3, ease: 'easeOut' }"
       class="flex flex-col w-full items-center justify-center gap-2.5 bg-surface-0 min-h-[54px] rounded-2xl p-2">
-      <!-- Показываем все выбранные документы -->
       <AnimatePresence>
         <motion.div
           v-for="document in selectedDocuments"
@@ -149,7 +154,7 @@ const handleKeydown = (event) => {
           outlined
           aria-haspopup="true"
           aria-controls="documents-menu"
-          @click="documentsMenu = !documentsMenu">
+          @mouseup="documentsMenuHandler">
           <template #icon>
             <i-custom-plus />
           </template>

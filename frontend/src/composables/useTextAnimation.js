@@ -59,12 +59,12 @@ export function useTextAnimation() {
   }
 
   const getWordClass = (word) => {
-    const baseClass = 'inline-block transition-all duration-300 ease-out'
+    const baseClass = 'inline-block transition-all duration-200 ease-out'
     if (word.animating) {
-      return `${baseClass} opacity-0 transform translate-y-2`
+      return `${baseClass} opacity-0 transform translate-x-2`
     }
     if (word.visible) {
-      return `${baseClass} opacity-100 transform translate-y-0`
+      return `${baseClass} opacity-100 transform translate-x-0`
     }
     return `${baseClass} opacity-0`
   }

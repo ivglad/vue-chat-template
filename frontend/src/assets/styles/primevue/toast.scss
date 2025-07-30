@@ -1,10 +1,10 @@
 @layer preset {
   :root {
-    --p-toast-width: 30rem;
-    --p-toast-content-padding: 1.5rem;
-    --p-toast-content-gap: 1.5rem;
+    --p-toast-width: fit-content;
+    // --p-toast-content-padding: 1rem;
+    // --p-toast-content-gap: 1rem;
     --p-toast-summary-font-weight: 700;
-    --p-toast-summary-font-size: 1.6rem;
+    --p-toast-summary-font-size: 1rem;
     --p-toast-detail-font-weight: 400;
     --p-toast-detail-font-size: initial;
   }

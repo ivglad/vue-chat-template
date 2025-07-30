@@ -39,16 +39,17 @@
       opacity: 0;
       pointer-events: none;
     }
-    &:has(input:focus) {
+    &:has(input:focus),
+    &:has(input[value]) {
       label {
         inset-inline-start: 0;
       }
     }
-    &:has(input:not(:focus)):has(&-message.p-message-error) {
-      label {
-        opacity: 0;
-      }
-    }
+    // &:has(input:not(:focus)):has(&-message.p-message-error) {
+    //   label {
+    //     opacity: 0;
+    //   }
+    // }
     &-message {
       @include transition;
       position: absolute;

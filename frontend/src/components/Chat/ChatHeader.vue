@@ -10,7 +10,7 @@
     <div class="flex w-full justify-center font-semibold text-base">
       Docwise+
     </div>
-    <Button class="text-surface-500" variant="text" rounded>
+    <Button class="invisible not-first:text-surface-500" variant="text" rounded>
       <template #icon>
         <i-custom-filter />
       </template>

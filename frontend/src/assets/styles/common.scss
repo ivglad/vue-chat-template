@@ -2,13 +2,9 @@
 @use '@/assets/styles/mixins' as *;
 
 @layer app {
-  * {
-    scroll-behavior: smooth;
-  }
-
   ::-webkit-scrollbar {
-    width: 1.2rem;
-    height: 1.2rem;
+    width: 0.875rem;
+    height: 0.875rem;
     background-color: transparent;
   }
   ::-webkit-scrollbar-button {
@@ -19,8 +15,8 @@
     background-color: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    border-radius: 0.6rem;
-    border: 0.45rem solid transparent;
+    border-radius: 0.4rem;
+    border: 0.3rem solid transparent;
     background-clip: padding-box;
     background-color: var(--p-primary-400);
     &:hover {
@@ -29,17 +25,12 @@
   }
 
   ::selection {
-    background: var(--p-surface-100);
+    background: #edeff6;
   }
 
   [placeholder] {
     text-overflow: ellipsis;
   }
-
-  // html {
-  // font-size: 62.5%;
-  // font-size: 14px;
-  // }
 
   body {
     @include font-base(14px);
@@ -57,7 +48,6 @@
     background: #edeff6;
     background-repeat: no-repeat;
     scrollbar-width: thin;
-    scroll-behavior: smooth;
     overflow-x: hidden;
   }
 
