@@ -35,7 +35,7 @@ defineExpose({
 <template>
   <div
     ref="messagesContainer"
-    class="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent [scrollbar-width:6px] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-sm [&::-webkit-scrollbar-thumb:hover]:bg-gray-400 scroll-smooth"
+    class="flex-1 overflow-y-auto px-4 py-6 space-y-4 scroll-smooth"
     @scroll="handleScroll">
     <ChatEmptyState v-if="!hasMessages && !isLoading" />
 

@@ -125,7 +125,7 @@ watch(
       <AnimatedContainer
         v-if="showDocumentsMenu"
         preset="slideUp"
-        container-class="absolute bottom-full left-4 right-4 mb-2 z-20 md:left-3 md:right-3">
+        container-class="absolute bottom-full left-4 right-4 w-fit mb-4">
         <ChatDocumentSelector
           v-model="selectedDocuments"
           :documents="documents"
@@ -136,7 +136,7 @@ watch(
 
     <AnimatedContainer
       preset="layoutShift"
-      container-class="bg-gray-50 rounded-2xl p-3 border border-gray-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all duration-200 md:p-2">
+      container-class="bg-white rounded-2xl p-2 transition-all duration-200">
       <AnimatePresence>
         <AnimatedList
           v-if="selectedDocuments.length > 0"
@@ -158,10 +158,10 @@ watch(
         </AnimatedList>
       </AnimatePresence>
 
-      <div class="flex items-end gap-3 md:gap-2">
+      <div class="flex items-center">
         <Button
           :disabled="disabled"
-          class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl border-surface-100"
+          class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl"
           aria-label="plus"
           outlined
           aria-haspopup="true"
@@ -175,12 +175,11 @@ watch(
         <Textarea
           v-model="messageText"
           ref="textareaRef"
-          class="flex-1 border-none shadow-none bg-transparent resize-none text-gray-900 placeholder-gray-500 focus:ring-0 focus:border-transparent min-h-[40px] max-h-[120px]"
+          class="h-full px-2 py-2 border-none shadow-none transition-all"
           placeholder="Задайте вопрос..."
-          :rows="1"
+          rows="1"
           :disabled="disabled"
           :maxlength="5000"
-          auto-resize
           @keydown="handleKeydown" />
 
         <Button

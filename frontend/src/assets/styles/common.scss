@@ -3,8 +3,8 @@
 
 @layer app {
   ::-webkit-scrollbar {
-    width: 0.875rem;
-    height: 0.875rem;
+    width: 1.25rem;
+    height: 1.25rem;
     background-color: transparent;
   }
   ::-webkit-scrollbar-button {
@@ -15,8 +15,8 @@
     background-color: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    border-radius: 0.4rem;
-    border: 0.3rem solid transparent;
+    border-radius: 100rem;
+    border: 0.5rem solid transparent;
     background-clip: padding-box;
     background-color: var(--p-primary-400);
     &:hover {

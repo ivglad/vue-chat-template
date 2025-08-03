@@ -72,32 +72,11 @@ const clearSelection = () => {
 
 <template>
   <div
-    class="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden max-h-[400px]">
-    <div
-      class="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-      <h3 class="text-lg font-semibold text-gray-900">Выберите документы</h3>
-      <Button
-        icon="i-custom-cross"
-        text
-        rounded
-        size="small"
-        class="text-gray-500 hover:text-gray-700"
-        @click="$emit('close')" />
-    </div>
+    class="bg-white rounded-2xl max-w-[250px] max-h-[200px] overflow-hidden overflow-y-auto [scrollbar-width]:w-[1.25rem] [&::-webkit-scrollbar]:w-[1.25rem] [&::-webkit-scrollbar-thumb]:border-[0.5rem] [&::-webkit-scrollbar-thumb]:rounded-full">
 
     <div class="flex flex-col h-full">
-      <!-- <div class="p-4 border-b border-gray-100">
-        <IconField iconPosition="left">
-          <InputIcon class="i-custom-search" />
-          <InputText
-            v-model="searchQuery"
-            placeholder="Поиск документов..."
-            class="w-full" />
-        </IconField>
-      </div> -->
-
       <div
-        class="flex-1 overflow-y-auto p-2 max-h-[250px] scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        class="flex-1 overflow-y-auto p-2 pr-0">
         <div
           v-if="loading"
           class="flex flex-col items-center justify-center py-8 text-gray-500">
@@ -124,42 +103,21 @@ const clearSelection = () => {
           container-class="space-y-1">
           <template #item="{ item: document }">
             <div
-              class="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors duration-150"
+              class="flex items-center gap-3 p-3 rounded-xl cursor-pointer select-none hover:bg-[#EDEFF6] transition-colors duration-150"
               :class="{
-                'bg-primary-50 border border-primary-200': isSelected(
+                'bg-[#EDEFF6]': isSelected(
                   document.id,
                 ),
               }"
               @click="toggleDocument(document)">
-              <i-custom-doc class="text-primary flex-shrink-0" />
-
               <div class="flex-1 min-w-0">
                 <div class="font-medium text-gray-900 truncate">
                   {{ document.title }}
                 </div>
-                <!-- <div class="text-xs text-gray-500 mt-1">
-                  ID: {{ document.id }}
-                </div> -->
               </div>
-
-              <!-- <div class="flex-shrink-0">
-                <Checkbox
-                  :model-value="isSelected(document.id)"
-                  binary
-                  @change="toggleDocument(document)" />
-              </div> -->
             </div>
           </template>
         </AnimatedList>
-      </div>
-
-      <div
-        v-if="selectedDocuments.length > 0"
-        class="flex items-center justify-between p-4 border-t border-gray-100 bg-gray-50">
-        <span class="text-sm font-medium text-gray-700">
-          Выбрано: {{ selectedDocuments.length }}
-        </span>
-        <Button label="Очистить" text size="small" @click="clearSelection" />
       </div>
     </div>
   </div>
