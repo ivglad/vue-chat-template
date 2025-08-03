@@ -48,7 +48,7 @@ export default defineConfig({
     AutoImport({
       include: [/\.[tj]sx?$/, /\.vue$/, /\.vue\?vue/, /\.md$/],
       dirs: [
-        'src/composables/**/*',
+        'src/composables/**',
         'src/helpers/**',
         'src/stores/**',
         'src/utils/**',
@@ -65,7 +65,6 @@ export default defineConfig({
       ],
       packagePresets: [
         'primevue',
-        // '@primeuix/themes',
         '@primevue/core/api',
         '@primevue/forms/resolvers/zod',
         '@tanstack/vue-query',

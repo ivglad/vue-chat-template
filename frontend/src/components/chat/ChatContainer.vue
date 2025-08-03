@@ -1,11 +1,4 @@
 <script setup>
-import ChatHeader from './ChatHeader.vue'
-import ChatMessage from './ChatMessage.vue'
-import ChatInput from './ChatInput.vue'
-import ChatEmptyState from './ChatEmptyState.vue'
-import ChatErrorDisplay from './ChatErrorDisplay.vue'
-import ChatMessagesList from './ChatMessagesList.vue'
-
 const messagesListRef = ref(null)
 
 const chatStore = useChatStore()
@@ -14,7 +7,7 @@ const { messages, isLoading, hasMessages, sendMessage } = useChatMessages()
 
 const { scrollToBottom, initScrollContainer } = useChatScroll()
 
-const { lastError, clearLastError, canRetry } = useChatErrorHandler()
+// Убираем сложную обработку ошибок - теперь просто показываем toast
 
 const isLoadingForMessage = computed(() => {
   return (messageId) => {
@@ -39,32 +32,7 @@ const handleSendMessage = async (messageData) => {
   }
 }
 
-/**
- * Повторить последнюю неудачную операцию
- */
-const handleRetry = () => {
-  if (!lastError.value || !canRetry(lastError.value)) {
-    return
-  }
-
-  const context = lastError.value.context
-
-  switch (context?.action) {
-    case 'send_message':
-      // Повторяем отправку сообщения
-      if (context.messageData) {
-        handleSendMessage(context.messageData)
-      }
-      break
-
-    case 'load_history':
-      // Обновляем историю
-      window.location.reload()
-      break
-  }
-
-  clearLastError()
-}
+// Убрали функцию handleRetry - теперь ошибки показываются только через toast
 
 // Автоматически прокручиваем вниз при новых сообщениях
 watch(
@@ -108,13 +76,6 @@ onUnmounted(() => {
       :is-loading-for-message="isLoadingForMessage" />
 
     <ChatInput :disabled="isLoading" @send-message="handleSendMessage" />
-
-    <ChatErrorDisplay
-      v-if="lastError"
-      :error="lastError"
-      :can-retry="canRetry"
-      @retry="handleRetry"
-      @clear="clearLastError" />
   </div>
 </template>
 

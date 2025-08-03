@@ -73,11 +73,14 @@ const clearSelection = () => {
 <template>
   <div
     class="bg-white rounded-2xl max-w-[250px] max-h-[200px] overflow-hidden overflow-y-auto [scrollbar-width]:w-[1.25rem] [&::-webkit-scrollbar]:w-[1.25rem] [&::-webkit-scrollbar-thumb]:border-[0.5rem] [&::-webkit-scrollbar-thumb]:rounded-full">
-
     <div class="flex flex-col h-full">
       <div
-        class="flex-1 overflow-y-auto p-2 pr-0">
+        class="flex-1 overflow-y-auto p-2"
+        :class="{
+          'pr-0': filteredDocuments.length > 4,
+        }">
         <div
+          <div
           v-if="loading"
           class="flex flex-col items-center justify-center py-8 text-gray-500">
           <ProgressSpinner size="small" />
@@ -105,9 +108,7 @@ const clearSelection = () => {
             <div
               class="flex items-center gap-3 p-3 rounded-xl cursor-pointer select-none hover:bg-[#EDEFF6] transition-colors duration-150"
               :class="{
-                'bg-[#EDEFF6]': isSelected(
-                  document.id,
-                ),
+                'bg-[#EDEFF6]': isSelected(document.id),
               }"
               @click="toggleDocument(document)">
               <div class="flex-1 min-w-0">

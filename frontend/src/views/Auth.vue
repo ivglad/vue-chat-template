@@ -111,13 +111,13 @@ defineOptions({
     class="flex flex-col items-center justify-center self-center flex-1 h-screen gap-5 w-full">
     <motion.h1
       v-bind="getElementAnimationProps(0)"
-      class="text-2xl mb-6 font-semibold text-gray-900">
+      class="text-2xl mb-6 font-semibold">
       Авторизация
     </motion.h1>
 
     <motion.div
       v-bind="getElementAnimationProps(1)"
-      class="w-full flex justify-center">
+      class="w-full flex justify-center max-w-[350px]">
       <Form
         class="flex flex-col items-center w-full max-w-md"
         :initialValues
@@ -129,7 +129,7 @@ defineOptions({
             :validateOnValueUpdate="false"
             validateOnBlur
             name="email">
-            <FloatLabel class="text-base">
+            <FloatLabel class="app-input text-base">
               <InputText
                 id="auth-form-email"
                 v-tooltip.top="{
@@ -138,25 +138,22 @@ defineOptions({
                 }"
                 :invalid="$field?.invalid"
                 fluid
-                class="rounded-xl border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
+                class="rounded-xl text-base" />
               <Message
-                class="text-base mt-2"
+                class="app-input-message"
                 :severity="$field?.invalid ? 'error' : 'contrast'"
                 variant="simple"
-                size="small"
                 v-if="$field?.invalid && $field.error?.message">
                 {{ $field.error?.message }}
               </Message>
-              <label for="auth-form-email" class="text-sm text-gray-600"
-                >Email</label
-              >
+              <label for="auth-form-email">Email</label>
             </FloatLabel>
           </FormField>
         </motion.div>
 
         <motion.div v-bind="getElementAnimationProps(3)" class="mb-6 w-full">
           <FormField v-slot="$field" validateOnValueUpdate name="password">
-            <FloatLabel class="text-base">
+            <FloatLabel class="app-input">
               <Password
                 id="auth-form-password"
                 type="text"
@@ -167,25 +164,22 @@ defineOptions({
                 :feedback="false"
                 toggleMask
                 fluid
-                class="rounded-xl [&_.p-password-input]:border-gray-300 [&_.p-password-input]:focus:border-primary-500 [&_.p-password-input]:focus:ring-2 [&_.p-password-input]:focus:ring-primary-100" />
+                class="rounded-xl text-base" />
               <Message
-                class="text-base mt-2"
+                class="app-input-message"
                 :severity="$field?.invalid ? 'error' : 'contrast'"
                 variant="simple"
-                size="small"
                 v-if="$field?.invalid && $field.error?.message">
                 {{ $field.error?.message }}
               </Message>
-              <label for="auth-form-password" class="text-sm text-gray-600"
-                >Пароль</label
-              >
+              <label for="auth-form-password">Пароль</label>
             </FloatLabel>
           </FormField>
         </motion.div>
 
-        <motion.div v-bind="getElementAnimationProps(4)" class="w-full">
+        <motion.div v-bind="getElementAnimationProps(4)">
           <Button
-            class="w-full h-[3.25rem] p-4 rounded-xl text-base font-medium bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:text-gray-500 transition-colors duration-200"
+            class="w-fit h-[3.25rem] p-4 rounded-xl text-base"
             type="submit"
             label="Войти в систему"
             :loading="loginUserIsPending"
@@ -199,9 +193,5 @@ defineOptions({
         </motion.div>
       </Form>
     </motion.div>
-
-    <Toast
-      position="top-right"
-      class="z-50 [&_.p-toast-message]:rounded-xl [&_.p-toast-message]:shadow-lg [&_.p-toast-message-content]:p-4" />
   </div>
 </template>

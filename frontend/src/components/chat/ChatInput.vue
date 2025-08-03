@@ -60,7 +60,7 @@ const handleSendMessage = () => {
 
   // Фокусируемся обратно на поле ввода
   nextTick(() => {
-    textareaRef.value?.focus()
+    textareaRef.value?.$el?.focus()
   })
 }
 
@@ -120,12 +120,12 @@ watch(
 </script>
 
 <template>
-  <div ref="inputContainer" class="relative px-4 pb-4">
+  <div ref="inputContainer" class="relative px-6 pb-4">
     <AnimatePresence>
       <AnimatedContainer
         v-if="showDocumentsMenu"
         preset="slideUp"
-        container-class="absolute bottom-full left-4 right-4 w-fit mb-4">
+        container-class="absolute bottom-full left-6 w-fit mb-4">
         <ChatDocumentSelector
           v-model="selectedDocuments"
           :documents="documents"

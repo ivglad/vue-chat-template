@@ -22,13 +22,13 @@
       border-left-color: var(--p-surface-0);
     }
     &-text {
-      font-size: 1.2rem;
+      font-size: var(--text-sm);
       color: var(--p-text-color);
       border-radius: var(--p-border-radius-md);
       background: var(--p-surface-0);
     }
   }
-  
+
   // FIXME: Раскомментировать после исправления бага в PrimeVue (не видит переменные)
   // .p-tooltip {
   //   max-width: var(--p-tooltip-app-max-width);
@@ -51,4 +51,4 @@
   //     background: var(--p-tooltip-app-border-color);
   //   }
   // }
-} 
+}

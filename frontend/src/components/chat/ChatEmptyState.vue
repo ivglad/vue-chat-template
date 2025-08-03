@@ -3,10 +3,10 @@
 </script>
 
 <template>
-  <div class="h-full flex items-center justify-center text-gray-500">
+  <div class="h-full flex items-center justify-center">
     <div class="text-center">
-      <i-custom-robot-original class="w-16 h-16 mb-4" />
-      <p class="text-lg">Чем я могу помочь?</p>
+      <i-custom-robot-original class="w-23 h-23" />
+      <p class="text-[1.25rem] italic color-[#]">Чем я могу помочь?</p>
     </div>
   </div>
 </template>

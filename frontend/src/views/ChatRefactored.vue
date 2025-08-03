@@ -7,10 +7,6 @@ defineOptions({
 <template>
   <div class="h-screen flex flex-col bg-white">
     <ChatContainer />
-
-    <Toast
-      position="top-right"
-      class="z-50 [&_.p-toast-message]:rounded-xl [&_.p-toast-message]:shadow-lg [&_.p-toast-message-content]:p-4" />
   </div>
 </template>
 

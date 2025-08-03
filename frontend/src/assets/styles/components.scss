@@ -42,14 +42,15 @@
     &:has(input:focus),
     &:has(input[value]) {
       label {
+        font-size: var(--text-sm);
         inset-inline-start: 0;
       }
     }
-    // &:has(input:not(:focus)):has(&-message.p-message-error) {
-    //   label {
-    //     opacity: 0;
-    //   }
-    // }
+
+    label {
+      font-size: var(--text-base);
+    }
+
     &-message {
       @include transition;
       position: absolute;
@@ -64,6 +65,7 @@
       background: var(--p-inputtext-background);
       z-index: 1;
       .p-message-text {
+        font-size: var(--text-sm);
         line-height: 1;
         white-space: nowrap;
         text-overflow: ellipsis;

@@ -80,15 +80,15 @@ onMounted(() => {
   <div class="text-base leading-relaxed">
     <div
       v-if="type === 'user'"
-      class="text-gray-900 whitespace-pre-wrap break-words"
+      class="whitespace-pre-wrap break-words"
       v-text="content" />
 
-    <div v-else-if="shouldAnimateText" class="text-gray-800">
+    <div v-else-if="shouldAnimateText">
       <span
         v-for="(word, index) in animatedWords"
         :key="index"
         :class="getWordClass(word)"
-        class="inline-block mr-1 transition-all duration-200 ease-out">
+        class="inline-block mr-1">
         {{ word.text }}
       </span>
     </div>
