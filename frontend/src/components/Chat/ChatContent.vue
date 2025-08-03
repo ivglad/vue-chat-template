@@ -270,7 +270,7 @@ watch(
         class="flex flex-col gap-4">
         <div class="flex justify-end">
           <div
-            class="flex flex-col max-w-[300px] bg-surface-0 rounded-2xl p-4 gap-2.5">
+            class="flex flex-col max-w-[300px] bg-white rounded-2xl p-4 gap-2.5">
             <div
               v-if="
                 message.context_documents && message.context_documents.length

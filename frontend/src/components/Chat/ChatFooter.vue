@@ -10,7 +10,6 @@ const { data: documentsData } = useDocuments({ per_page: 100 })
 
 // Получаем функции для работы с локальными сообщениями
 const addLocalMessage = inject('addLocalMessage')
-const clearLocalMessages = inject('clearLocalMessages')
 
 const message = ref('')
 
@@ -118,7 +117,7 @@ const documentsMenuHandler = () => {
     <motion.div
       layout
       :transition="{ duration: 0.3, ease: 'easeOut' }"
-      class="flex flex-col w-full items-center justify-center gap-2.5 bg-surface-0 min-h-[54px] rounded-2xl p-2">
+      class="flex flex-col w-full items-center justify-center gap-2.5 bg-white min-h-[54px] rounded-2xl p-2">
       <AnimatePresence>
         <motion.div
           v-for="document in selectedDocuments"

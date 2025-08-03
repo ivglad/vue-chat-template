@@ -1,123 +1,51 @@
-<template>
-  <div class="message-content">
-    <!-- Обычный текст для пользовательских сообщений -->
-    <div 
-      v-if="type === 'user'"
-      class="user-message-text"
-      v-text="content"
-    />
-    
-    <!-- Анимированный текст для ответов бота -->
-    <div 
-      v-else-if="shouldAnimateText"
-      class="bot-message-animated"
-    >
-      <span
-        v-for="(word, index) in animatedWords"
-        :key="index"
-        :class="getWordClass(word)"
-        class="inline-block mr-1"
-      >
-        {{ word.text }}
-      </span>
-    </div>
-    
-    <!-- Статичный текст для ответов бота (без анимации) -->
-    <div 
-      v-else
-      class="bot-message-static"
-      v-html="formattedContent"
-    />
-  </div>
-</template>
-
 <script setup>
-import { computed, watch, onMounted } from 'vue'
-import { useTextAnimation } from '@/composables/useTextAnimation'
-import { useMarkdownParser } from '@/composables/useMarkdownParser'
-
-/**
- * Компонент для отображения содержимого сообщения
- * Поддерживает анимацию текста и markdown форматирование
- * Следует принципу Single Responsibility
- */
-
-// ============================================================================
-// Props
-// ============================================================================
-
 const props = defineProps({
-  /**
-   * Содержимое сообщения
-   */
   content: {
     type: String,
-    required: true
+    required: true,
   },
-  
-  /**
-   * Тип сообщения ('user' | 'bot')
-   */
   type: {
     type: String,
     required: true,
-    validator: (value) => ['user', 'bot'].includes(value)
+    validator: (value) => ['user', 'bot'].includes(value),
   },
-  
-  /**
-   * Является ли сообщение локальным (еще не отправлено)
-   */
   isLocal: {
     type: Boolean,
-    default: false
+    default: false,
   },
-  
-  /**
-   * Включить анимацию текста для ответов бота
-   */
   enableAnimation: {
     type: Boolean,
-    default: true
-  }
+    default: true,
+  },
 })
 
-// ============================================================================
-// Composables
-// ============================================================================
-
-const { 
-  animatedWords, 
-  isAnimating, 
-  animateText, 
+const {
+  animatedWords,
+  isAnimating,
+  animateText,
   resetAnimation,
-  getWordClass 
+  getWordClass,
 } = useTextAnimation()
 
 const { parseMarkdown } = useMarkdownParser()
 
-// ============================================================================
-// Computed
-// ============================================================================
-
 const shouldAnimateText = computed(() => {
-  return props.type === 'bot' && 
-         props.enableAnimation && 
-         !props.isLocal &&
-         props.content.length > 0
+  return (
+    props.type === 'bot' &&
+    props.enableAnimation &&
+    !props.isLocal &&
+    props.content.length > 0
+  )
 })
 
 const formattedContent = computed(() => {
   if (props.type === 'user') {
     return props.content
   }
-  
+
   // Парсим markdown для ответов бота
   return parseMarkdown(props.content)
 })
-
-// ============================================================================
-// Watchers
-// ============================================================================
 
 // Запускаем анимацию при изменении контента
 watch(
@@ -125,112 +53,49 @@ watch(
   (newContent) => {
     if (shouldAnimateText.value && newContent) {
       resetAnimation()
-      
+
       // Небольшая задержка для плавности
       setTimeout(() => {
         animateText(newContent, {
           wordDelay: 80,
-          fadeInDuration: 250
+          fadeInDuration: 250,
         })
       }, 100)
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
-
-// ============================================================================
-// Lifecycle
-// ============================================================================
 
 onMounted(() => {
   if (shouldAnimateText.value && props.content) {
     animateText(props.content, {
       wordDelay: 80,
-      fadeInDuration: 250
+      fadeInDuration: 250,
     })
   }
 })
 </script>
 
-<style scoped>
-.message-content {
-  @apply text-base leading-relaxed;
-}
+<template>
+  <div class="text-base leading-relaxed">
+    <div
+      v-if="type === 'user'"
+      class="text-gray-900 whitespace-pre-wrap break-words"
+      v-text="content" />
 
-.user-message-text {
-  @apply text-surface-900 whitespace-pre-wrap break-words;
-}
+    <div v-else-if="shouldAnimateText" class="text-gray-800">
+      <span
+        v-for="(word, index) in animatedWords"
+        :key="index"
+        :class="getWordClass(word)"
+        class="inline-block mr-1 transition-all duration-200 ease-out">
+        {{ word.text }}
+      </span>
+    </div>
 
-.bot-message-animated {
-  @apply text-surface-800;
-}
-
-.bot-message-static {
-  @apply text-surface-800 prose prose-sm max-w-none;
-}
-
-/* Стили для анимированных слов */
-.bot-message-animated .inline-block {
-  transition: all 0.2s ease-out;
-}
-
-/* Markdown стили */
-.bot-message-static :deep(h1),
-.bot-message-static :deep(h2),
-.bot-message-static :deep(h3) {
-  @apply font-semibold text-surface-900 mt-4 mb-2;
-}
-
-.bot-message-static :deep(h1) {
-  @apply text-xl;
-}
-
-.bot-message-static :deep(h2) {
-  @apply text-lg;
-}
-
-.bot-message-static :deep(h3) {
-  @apply text-base;
-}
-
-.bot-message-static :deep(p) {
-  @apply mb-3 last:mb-0;
-}
-
-.bot-message-static :deep(ul),
-.bot-message-static :deep(ol) {
-  @apply ml-4 mb-3;
-}
-
-.bot-message-static :deep(li) {
-  @apply mb-1;
-}
-
-.bot-message-static :deep(code) {
-  @apply bg-surface-100 text-surface-800 px-1 py-0.5 rounded text-sm font-mono;
-}
-
-.bot-message-static :deep(pre) {
-  @apply bg-surface-100 p-3 rounded-lg overflow-x-auto mb-3;
-}
-
-.bot-message-static :deep(pre code) {
-  @apply bg-transparent p-0;
-}
-
-.bot-message-static :deep(blockquote) {
-  @apply border-l-4 border-surface-300 pl-4 italic text-surface-600 mb-3;
-}
-
-.bot-message-static :deep(strong) {
-  @apply font-semibold text-surface-900;
-}
-
-.bot-message-static :deep(em) {
-  @apply italic;
-}
-
-.bot-message-static :deep(a) {
-  @apply text-primary-600 hover:text-primary-700 underline;
-}
-</style>
+    <div
+      v-else
+      class="text-gray-800 prose prose-sm max-w-none [&_h1]:font-semibold [&_h1]:text-gray-900 [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h2]:font-semibold [&_h2]:text-gray-900 [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h3]:font-semibold [&_h3]:text-gray-900 [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-base [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:ml-4 [&_ul]:mb-3 [&_ol]:ml-4 [&_ol]:mb-3 [&_li]:mb-1 [&_code]:bg-surface-100 [&_code]:text-gray-800 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_pre]:bg-surface-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_blockquote]:border-l-4 [&_blockquote]:border-surface-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-surface-600 [&_blockquote]:mb-3 [&_strong]:font-semibold [&_strong]:text-gray-900 [&_em]:italic [&_a]:text-primary-600 [&_a:hover]:text-primary-700 [&_a]:underline"
+      v-html="formattedContent" />
+  </div>
+</template>

@@ -110,24 +110,27 @@ watch(
 // Предоставляем функции дочерним компонентам
 provide('addLocalMessage', addLocalMessage)
 provide('clearLocalMessages', clearLocalMessages)
+
+// Обработчик отправки сообщения
+const { mutate: sendMessage } = useSendChatMessage()
+
+const handleSendMessage = (messageData) => {
+  sendMessage(messageData, {
+    onSuccess: () => {},
+    onError: (error) => {
+      console.error('Ошибка отправки сообщения:', error)
+    },
+  })
+}
 </script>
 
 <template>
   <div class="flex flex-col relative h-screen">
-    <motion.div v-bind="getElementAnimationProps(0)" class="sticky top-0">
-      <ChatHeader />
-    </motion.div>
-
-    <motion.div
-      v-bind="getElementAnimationProps(1)"
-      class="flex-1 overflow-hidden">
-      <ChatContent
+    <motion.div v-bind="getElementAnimationProps(0)">
+      <ChatContainer
         :messages-history="messagesHistory"
-        :is-loading="isLoading" />
-    </motion.div>
-
-    <motion.div v-bind="getElementAnimationProps(2)" class="sticky bottom-0">
-      <ChatFooter />
+        :is-loading="isLoading"
+        @send-message="handleSendMessage" />
     </motion.div>
   </div>
 </template>

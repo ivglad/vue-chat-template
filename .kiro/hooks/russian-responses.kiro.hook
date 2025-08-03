@@ -4,7 +4,7 @@
   "description": "Хук для обеспечения ответов на русском языке во всех взаимодействиях с пользователем",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "**/*"
     ]

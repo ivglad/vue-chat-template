@@ -1,209 +1,63 @@
-<template>
-  <div class="chat-input-container">
-    <!-- Селектор документов -->
-    <AnimatePresence>
-      <AnimatedContainer
-        v-if="showDocumentsMenu"
-        preset="slideUp"
-        container-class="documents-menu-container"
-      >
-        <ChatDocumentSelector
-          v-model="selectedDocuments"
-          :documents="documents"
-          :loading="documentsLoading"
-          @close="closeDocumentsMenu"
-        />
-      </AnimatedContainer>
-    </AnimatePresence>
-    
-    <!-- Основная область ввода -->
-    <AnimatedContainer
-      preset="layoutShift"
-      container-class="input-main-container"
-    >
-      <!-- Выбранные документы -->
-      <AnimatePresence>
-        <AnimatedList
-          v-if="selectedDocuments.length > 0"
-          :items="selectedDocuments"
-          item-preset="documentSlide"
-          :stagger-delay="0.05"
-          container-class="selected-documents-list"
-        >
-          <template #item="{ item: document }">
-            <ChatSelectedDocument
-              :document="document"
-              @remove="removeDocument(document.id)"
-            />
-          </template>
-        </AnimatedList>
-      </AnimatePresence>
-      
-      <!-- Поле ввода -->
-      <div class="input-row">
-        <!-- Кнопка документов -->
-        <Button
-          class="documents-button"
-          :class="{ 'active': showDocumentsMenu }"
-          icon="pi pi-paperclip"
-          outlined
-          rounded
-          size="small"
-          :disabled="disabled"
-          @click="toggleDocumentsMenu"
-        />
-        
-        <!-- Текстовое поле -->
-        <Textarea
-          ref="textareaRef"
-          v-model="messageText"
-          class="message-textarea"
-          placeholder="Задайте вопрос..."
-          :rows="1"
-          :disabled="disabled"
-          :maxlength="5000"
-          auto-resize
-          @keydown="handleKeydown"
-          @focus="handleFocus"
-          @blur="handleBlur"
-        />
-        
-        <!-- Кнопка отправки -->
-        <Button
-          class="send-button"
-          :disabled="!canSend"
-          :loading="disabled"
-          icon="pi pi-send"
-          rounded
-          size="small"
-          @click="handleSendMessage"
-        />
-      </div>
-      
-      <!-- Счетчик символов -->
-      <div 
-        v-if="showCharacterCount"
-        class="character-count"
-        :class="{ 'warning': isNearLimit }"
-      >
-        {{ messageText.length }}/5000
-      </div>
-    </AnimatedContainer>
-  </div>
-</template>
-
 <script setup>
-import { ref, computed, nextTick, watch } from 'vue'
-import { motion, AnimatePresence } from 'motion-v'
 import { onClickOutside } from '@vueuse/core'
+import { AnimatePresence } from 'motion-v'
 import { useDocuments } from '@/helpers/api/queries'
-
-import AnimatedContainer from '@/components/ui/animations/AnimatedContainer.vue'
-import AnimatedList from '@/components/ui/animations/AnimatedList.vue'
 import ChatDocumentSelector from './ChatDocumentSelector.vue'
-import ChatSelectedDocument from './ChatSelectedDocument.vue'
-
-/**
- * Компонент ввода сообщений в чате
- * Поддерживает выбор документов, валидацию и отправку
- * Следует принципам Single Responsibility и Composition
- */
-
-// ============================================================================
-// Emits
-// ============================================================================
 
 const emit = defineEmits(['send-message'])
 
-// ============================================================================
-// Props
-// ============================================================================
-
 const props = defineProps({
-  /**
-   * Отключить ввод
-   */
   disabled: {
     type: Boolean,
-    default: false
-  }
+    default: false,
+  },
 })
-
-// ============================================================================
-// Refs
-// ============================================================================
 
 const textareaRef = ref(null)
 const inputContainer = ref(null)
 
-// ============================================================================
-// State
-// ============================================================================
-
 const messageText = ref('')
 const selectedDocuments = ref([])
 const showDocumentsMenu = ref(false)
-const isFocused = ref(false)
 
-// ============================================================================
-// API
-// ============================================================================
-
-const { 
-  data: documentsData, 
-  isLoading: documentsLoading 
-} = useDocuments({ per_page: 100 })
-
-// ============================================================================
-// Computed
-// ============================================================================
+const { data: documentsData, isLoading: documentsLoading } = useDocuments({
+  per_page: 100,
+})
 
 const documents = computed(() => {
-  return documentsData.value?.documents?.map(doc => ({
-    id: doc.id,
-    title: doc.title,
-    label: doc.title // для совместимости
-  })) || []
+  return (
+    documentsData.value?.documents?.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      label: doc.title, // для совместимости
+    })) || []
+  )
 })
 
 const canSend = computed(() => {
   return messageText.value.trim().length > 0 && !props.disabled
 })
 
-const showCharacterCount = computed(() => {
-  return isFocused.value && messageText.value.length > 0
-})
-
-const isNearLimit = computed(() => {
-  return messageText.value.length > 4500
-})
-
-// ============================================================================
-// Methods
-// ============================================================================
-
-/**
- * Обработать отправку сообщения
- */
+// Обработать отправку сообщения
 const handleSendMessage = () => {
   if (!canSend.value) return
-  
+
   const messageData = {
-    message: messageText.value.trim()
+    message: messageText.value.trim(),
   }
-  
+
   // Добавляем документы если выбраны
   if (selectedDocuments.value.length > 0) {
-    messageData.document_ids = selectedDocuments.value.map(doc => doc.id)
+    messageData.document_ids = selectedDocuments.value.map((doc) => doc.id)
     messageData.documents = selectedDocuments.value
   }
-  
+
   // Отправляем сообщение
   emit('send-message', messageData)
-  
+
   // Очищаем поле ввода
   messageText.value = ''
-  
+
   // Фокусируемся обратно на поле ввода
   nextTick(() => {
     textareaRef.value?.focus()
@@ -220,37 +74,19 @@ const handleKeydown = (event) => {
     event.preventDefault()
     handleSendMessage()
   }
-  
+
   // Escape - закрыть меню документов
   if (event.key === 'Escape' && showDocumentsMenu.value) {
     closeDocumentsMenu()
   }
 }
 
-/**
- * Обработать фокус поля ввода
- */
-const handleFocus = () => {
-  isFocused.value = true
-}
-
-/**
- * Обработать потерю фокуса поля ввода
- */
-const handleBlur = () => {
-  isFocused.value = false
-}
-
-/**
- * Переключить меню документов
- */
+// Переключить меню документов
 const toggleDocumentsMenu = () => {
   showDocumentsMenu.value = !showDocumentsMenu.value
 }
 
-/**
- * Закрыть меню документов
- */
+//  Закрыть меню документов
 const closeDocumentsMenu = () => {
   showDocumentsMenu.value = false
 }
@@ -261,13 +97,9 @@ const closeDocumentsMenu = () => {
  */
 const removeDocument = (documentId) => {
   selectedDocuments.value = selectedDocuments.value.filter(
-    doc => doc.id !== documentId
+    (doc) => doc.id !== documentId,
   )
 }
-
-// ============================================================================
-// Click Outside
-// ============================================================================
 
 onClickOutside(inputContainer, () => {
   if (showDocumentsMenu.value) {
@@ -275,93 +107,96 @@ onClickOutside(inputContainer, () => {
   }
 })
 
-// ============================================================================
-// Watchers
-// ============================================================================
-
 // Автоматически закрываем меню при выборе документов
-watch(selectedDocuments, (newDocs, oldDocs) => {
-  if (newDocs.length > (oldDocs?.length || 0)) {
-    closeDocumentsMenu()
-  }
-}, { deep: true })
+watch(
+  selectedDocuments,
+  (newDocs, oldDocs) => {
+    if (newDocs.length > (oldDocs?.length || 0)) {
+      closeDocumentsMenu()
+    }
+  },
+  { deep: true },
+)
 </script>
 
-<style scoped>
-.chat-input-container {
-  @apply relative p-4 bg-surface-0 border-t border-surface-200;
-}
+<template>
+  <div ref="inputContainer" class="relative px-4 pb-4">
+    <AnimatePresence>
+      <AnimatedContainer
+        v-if="showDocumentsMenu"
+        preset="slideUp"
+        container-class="absolute bottom-full left-4 right-4 mb-2 z-20 md:left-3 md:right-3">
+        <ChatDocumentSelector
+          v-model="selectedDocuments"
+          :documents="documents"
+          :loading="documentsLoading"
+          @close="closeDocumentsMenu" />
+      </AnimatedContainer>
+    </AnimatePresence>
 
-.documents-menu-container {
-  @apply absolute bottom-full left-4 right-4 mb-2 z-20;
-}
+    <AnimatedContainer
+      preset="layoutShift"
+      container-class="bg-gray-50 rounded-2xl p-3 border border-gray-200 focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100 transition-all duration-200 md:p-2">
+      <AnimatePresence>
+        <AnimatedList
+          v-if="selectedDocuments.length > 0"
+          :items="selectedDocuments"
+          item-preset="documentSlide"
+          :stagger-delay="0.05"
+          container-class="flex flex-wrap gap-2 mb-3">
+          <template #item="{ item: document }">
+            <div
+              class="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+              <span>{{ document.title }}</span>
+              <button
+                @click="removeDocument(document.id)"
+                class="hover:bg-blue-200 rounded-full p-1">
+                <i-custom-cross />
+              </button>
+            </div>
+          </template>
+        </AnimatedList>
+      </AnimatePresence>
 
-.input-main-container {
-  @apply bg-surface-50 rounded-2xl p-3 border border-surface-200;
-  @apply focus-within:border-primary-300 focus-within:ring-2 focus-within:ring-primary-100;
-  transition: all 0.2s ease;
-}
+      <div class="flex items-end gap-3 md:gap-2">
+        <Button
+          :disabled="disabled"
+          class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl border-surface-100"
+          aria-label="plus"
+          outlined
+          aria-haspopup="true"
+          aria-controls="documents-menu"
+          @click="toggleDocumentsMenu">
+          <template #icon>
+            <i-custom-plus />
+          </template>
+        </Button>
 
-.selected-documents-list {
-  @apply flex flex-wrap gap-2 mb-3;
-}
+        <Textarea
+          v-model="messageText"
+          ref="textareaRef"
+          class="flex-1 border-none shadow-none bg-transparent resize-none text-gray-900 placeholder-gray-500 focus:ring-0 focus:border-transparent min-h-[40px] max-h-[120px]"
+          placeholder="Задайте вопрос..."
+          :rows="1"
+          :disabled="disabled"
+          :maxlength="5000"
+          auto-resize
+          @keydown="handleKeydown" />
 
-.input-row {
-  @apply flex items-end gap-3;
-}
-
-.documents-button {
-  @apply flex-shrink-0 w-10 h-10;
-  @apply text-surface-600 hover:text-primary-600;
-}
-
-.documents-button.active {
-  @apply text-primary-600 bg-primary-50 border-primary-300;
-}
-
-.message-textarea {
-  @apply flex-1 border-none shadow-none bg-transparent resize-none;
-  @apply text-surface-900 placeholder-surface-500;
-  @apply focus:ring-0 focus:border-transparent;
-  min-height: 40px;
-  max-height: 120px;
-}
-
-.send-button {
-  @apply flex-shrink-0 w-10 h-10;
-  @apply bg-primary-500 text-white hover:bg-primary-600;
-  @apply disabled:bg-surface-300 disabled:text-surface-500;
-}
-
-.character-count {
-  @apply text-xs text-surface-500 text-right mt-2;
-}
-
-.character-count.warning {
-  @apply text-orange-600;
-}
-
-/* Анимации */
-.input-main-container {
-  transition: all 0.3s ease;
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  .chat-input-container {
-    @apply p-3;
-  }
-  
-  .documents-menu-container {
-    @apply left-3 right-3;
-  }
-  
-  .input-main-container {
-    @apply p-2;
-  }
-  
-  .input-row {
-    @apply gap-2;
-  }
-}
-</style>
+        <Button
+          :disabled="!canSend"
+          :loading="disabled"
+          class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl"
+          aria-label="send"
+          @click="handleSendMessage">
+          <template #icon>
+            <div
+              v-if="disabled"
+              class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            <i-custom-send v-else />
+          </template>
+        </Button>
+      </div>
+    </AnimatedContainer>
+  </div>
+</template>

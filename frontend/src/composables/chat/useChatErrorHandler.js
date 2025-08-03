@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 
 /**
  * Композабл для централизованной обработки ошибок чата
@@ -8,14 +9,14 @@ export function useChatErrorHandler() {
   // ============================================================================
   // State
   // ============================================================================
-  
+
   const lastError = ref(null)
   const errorHistory = ref([])
-  
+
   // ============================================================================
   // Error Mapping
   // ============================================================================
-  
+
   const ERROR_MESSAGES = {
     // HTTP статус коды
     400: 'Некорректный запрос. Проверьте данные сообщения.',
@@ -27,26 +28,26 @@ export function useChatErrorHandler() {
     500: 'Ошибка сервера. Попробуйте позже.',
     502: 'Сервер временно недоступен.',
     503: 'Сервис временно недоступен.',
-    
+
     // Сетевые ошибки
-    'NETWORK_ERROR': 'Проблемы с подключением к интернету.',
-    'TIMEOUT_ERROR': 'Превышено время ожидания ответа.',
-    'ABORT_ERROR': 'Запрос был отменен.',
-    
+    NETWORK_ERROR: 'Проблемы с подключением к интернету.',
+    TIMEOUT_ERROR: 'Превышено время ожидания ответа.',
+    ABORT_ERROR: 'Запрос был отменен.',
+
     // Ошибки чата
-    'EMPTY_MESSAGE': 'Сообщение не может быть пустым.',
-    'MESSAGE_TOO_LONG': 'Сообщение слишком длинное.',
-    'NO_DOCUMENTS_ACCESS': 'Нет доступа к выбранным документам.',
-    'PROCESSING_ERROR': 'Ошибка обработки сообщения.',
-    
+    EMPTY_MESSAGE: 'Сообщение не может быть пустым.',
+    MESSAGE_TOO_LONG: 'Сообщение слишком длинное.',
+    NO_DOCUMENTS_ACCESS: 'Нет доступа к выбранным документам.',
+    PROCESSING_ERROR: 'Ошибка обработки сообщения.',
+
     // Общие ошибки
-    'UNKNOWN_ERROR': 'Произошла неизвестная ошибка.'
+    UNKNOWN_ERROR: 'Произошла неизвестная ошибка.',
   }
-  
+
   // ============================================================================
   // Error Classification
   // ============================================================================
-  
+
   /**
    * Классифицировать ошибку по типу
    * @param {Error|Object} error - объект ошибки
@@ -59,49 +60,53 @@ export function useChatErrorHandler() {
         type: 'http',
         code: error.response.status,
         severity: error.response.status >= 500 ? 'error' : 'warn',
-        retryable: error.response.status >= 500 || error.response.status === 429
+        retryable:
+          error.response.status >= 500 || error.response.status === 429,
       }
     }
-    
+
     // Сетевые ошибки
-    if (error?.code === 'NETWORK_ERROR' || error?.message?.includes('Network Error')) {
+    if (
+      error?.code === 'NETWORK_ERROR' ||
+      error?.message?.includes('Network Error')
+    ) {
       return {
         type: 'network',
         code: 'NETWORK_ERROR',
         severity: 'error',
-        retryable: true
+        retryable: true,
       }
     }
-    
+
     // Timeout ошибки
     if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
       return {
         type: 'timeout',
         code: 'TIMEOUT_ERROR',
         severity: 'warn',
-        retryable: true
+        retryable: true,
       }
     }
-    
+
     // Отмененные запросы
     if (error?.code === 'ERR_CANCELED') {
       return {
         type: 'abort',
         code: 'ABORT_ERROR',
         severity: 'info',
-        retryable: false
+        retryable: false,
       }
     }
-    
+
     // Неизвестные ошибки
     return {
       type: 'unknown',
       code: 'UNKNOWN_ERROR',
       severity: 'error',
-      retryable: false
+      retryable: false,
     }
   }
-  
+
   /**
    * Получить пользовательское сообщение об ошибке
    * @param {Object} errorClassification - классификация ошибки
@@ -114,15 +119,17 @@ export function useChatErrorHandler() {
     if (serverMessage && typeof serverMessage === 'string') {
       return serverMessage
     }
-    
+
     // Используем предопределенное сообщение
-    return ERROR_MESSAGES[errorClassification.code] || ERROR_MESSAGES.UNKNOWN_ERROR
+    return (
+      ERROR_MESSAGES[errorClassification.code] || ERROR_MESSAGES.UNKNOWN_ERROR
+    )
   }
-  
+
   // ============================================================================
   // Error Handling
   // ============================================================================
-  
+
   /**
    * Обработать ошибку чата
    * @param {Error|Object} error - объект ошибки
@@ -132,7 +139,7 @@ export function useChatErrorHandler() {
   const handleChatError = (error, context = {}) => {
     const classification = classifyError(error)
     const userMessage = getUserMessage(classification, error)
-    
+
     const processedError = {
       id: Date.now(),
       timestamp: new Date().toISOString(),
@@ -140,18 +147,18 @@ export function useChatErrorHandler() {
       classification,
       userMessage,
       context,
-      handled: true
+      handled: true,
     }
-    
+
     // Сохраняем ошибку
     lastError.value = processedError
     errorHistory.value.unshift(processedError)
-    
+
     // Ограничиваем историю ошибок
     if (errorHistory.value.length > 50) {
       errorHistory.value = errorHistory.value.slice(0, 50)
     }
-    
+
     // Логируем для разработки
     if (process.env.NODE_ENV === 'development') {
       console.group('🚨 Chat Error')
@@ -161,19 +168,19 @@ export function useChatErrorHandler() {
       console.info('Context:', context)
       console.groupEnd()
     }
-    
+
     // Показываем toast уведомление
     const toast = useToast()
     toast.add({
       severity: classification.severity,
       summary: 'Ошибка чата',
       detail: userMessage,
-      life: classification.severity === 'error' ? 8000 : 5000
+      life: classification.severity === 'error' ? 8000 : 5000,
     })
-    
+
     return processedError
   }
-  
+
   /**
    * Обработать ошибку отправки сообщения
    * @param {Error|Object} error - объект ошибки
@@ -185,11 +192,11 @@ export function useChatErrorHandler() {
       messageData: {
         messageLength: messageData?.message?.length || 0,
         hasDocuments: Boolean(messageData?.document_ids?.length),
-        documentCount: messageData?.document_ids?.length || 0
-      }
+        documentCount: messageData?.document_ids?.length || 0,
+      },
     })
   }
-  
+
   /**
    * Обработать ошибку загрузки истории
    * @param {Error|Object} error - объект ошибки
@@ -198,20 +205,20 @@ export function useChatErrorHandler() {
   const handleHistoryError = (error, params) => {
     return handleChatError(error, {
       action: 'load_history',
-      params
+      params,
     })
   }
-  
+
   /**
    * Обработать ошибку очистки истории
    * @param {Error|Object} error - объект ошибки
    */
   const handleClearHistoryError = (error) => {
     return handleChatError(error, {
-      action: 'clear_history'
+      action: 'clear_history',
     })
   }
-  
+
   /**
    * Проверить, можно ли повторить операцию
    * @param {Object} processedError - обработанная ошибка
@@ -220,14 +227,14 @@ export function useChatErrorHandler() {
   const canRetry = (processedError) => {
     return processedError?.classification?.retryable || false
   }
-  
+
   /**
    * Очистить последнюю ошибку
    */
   const clearLastError = () => {
     lastError.value = null
   }
-  
+
   /**
    * Очистить историю ошибок
    */
@@ -235,29 +242,29 @@ export function useChatErrorHandler() {
     errorHistory.value = []
     lastError.value = null
   }
-  
+
   // ============================================================================
   // Return
   // ============================================================================
-  
+
   return {
     // State
     lastError,
     errorHistory,
-    
+
     // General error handling
     handleChatError,
     classifyError,
     getUserMessage,
-    
+
     // Specific error handlers
     handleSendMessageError,
     handleHistoryError,
     handleClearHistoryError,
-    
+
     // Utilities
     canRetry,
     clearLastError,
-    clearErrorHistory
+    clearErrorHistory,
   }
 }

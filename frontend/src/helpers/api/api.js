@@ -1,6 +1,6 @@
 import axios from 'axios'
-import { useUserStore } from '@/store/userStore'
 import router from '@/router'
+import { useUserStore } from '@/stores/user/userStore'
 
 const api = axios.create({
   withCredentials: true,

@@ -1,6 +1,5 @@
 <script setup>
 import { motion } from 'motion-v'
-import { usePageTransition } from '@/composables/usePageTransition'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -8,15 +7,17 @@ const toast = useToast()
 
 // Композабл для поочередной анимации элементов
 const { getElementAnimationProps } = usePageTransition({
-  staggerDelay: 0.1, // Увеличиваем задержку для более заметного эффекта
+  staggerDelay: 0.1,
   enterDuration: 0.3,
   enterDelay: 0.2,
 })
 
+// Композабл для обработки ошибок (по аналогии с чатом)
+const { handleError, clearError } = useAuthErrorHandler()
+
 const initialValues = ref({
   email: '',
   password: '',
-  remember: false,
 })
 
 const loginSchema = z.object({
@@ -28,9 +29,6 @@ const loginSchema = z.object({
     .refine((value) => /[a-z]/.test(value), {
       message: 'Должен содержать строчные латинские буквы',
     }),
-  remember: z.boolean().refine((checked) => checked, {
-    message: 'Необходимо принять условие',
-  }),
 })
 
 const loginResolver = zodResolver(loginSchema)
@@ -38,9 +36,17 @@ const loginResolver = zodResolver(loginSchema)
 const { mutate: loginUserMutation, isPending: loginUserIsPending } =
   useLoginUser()
 
+/**
+ * Обработать отправку формы авторизации
+ * @param {Object} e - событие формы
+ */
 const loginSubmit = async (e) => {
   if (!e.valid) return
+
+  clearError()
+
   const { email, password } = e.states
+
   loginUserMutation(
     {
       email: email.value,
@@ -48,30 +54,45 @@ const loginSubmit = async (e) => {
     },
     {
       onError: (error) => {
+        // Обрабатываем ошибку через композабл
+        handleError(error, {
+          action: 'login',
+          context: { email: email.value },
+        })
+
+        // Помечаем поля как невалидные
         e.states.email.valid = false
         e.states.email.invalid = true
         e.states.password.valid = false
         e.states.password.invalid = true
-        // Для добавления сообщения об ошибке в tooltip поля
-        // e.states.email.error = {
-        //   message: error?.response?.data?.message,
-        // }
 
+        // Показываем toast уведомление
         toast.add({
           severity: 'error',
-          summary: 'Ошибка',
-          detail: error?.response?.data?.message,
+          summary: 'Ошибка авторизации',
+          detail: error?.response?.data?.message || 'Неверные учетные данные',
           life: 5000,
         })
       },
       onSuccess: (data) => {
         const { user, token } = data.data.data
+
         // Объединяем данные пользователя с токеном
         const userData = {
           ...user,
           accessToken: token,
         }
+
+        // Инициализируем пользователя в store
         userStore.initUser(userData)
+
+        // Показываем успешное уведомление
+        toast.add({
+          severity: 'success',
+          summary: 'Успешно',
+          detail: 'Добро пожаловать!',
+          life: 3000,
+        })
 
         // Перенаправляем на страницу чата
         router.push('/chat')
@@ -79,35 +100,36 @@ const loginSubmit = async (e) => {
     },
   )
 }
+
+defineOptions({
+  name: 'AuthPage',
+})
 </script>
 
 <template>
   <div
     class="flex flex-col items-center justify-center self-center flex-1 h-screen gap-5 w-full">
-    <!-- Заголовок с анимацией появления (индекс 0) -->
-    <motion.h1 v-bind="getElementAnimationProps(0)" class="text-2xl mb-6">
+    <motion.h1
+      v-bind="getElementAnimationProps(0)"
+      class="text-2xl mb-6 font-semibold text-gray-900">
       Авторизация
     </motion.h1>
 
-    <!-- Форма с анимацией появления (индекс 1) -->
     <motion.div
       v-bind="getElementAnimationProps(1)"
       class="w-full flex justify-center">
       <Form
-        class="auth-form flex flex-col items-center"
+        class="flex flex-col items-center w-full max-w-md"
         :initialValues
         :resolver="loginResolver"
         @submit="loginSubmit">
-        <!-- Поле Email с анимацией (индекс 2) -->
-        <motion.div
-          v-bind="getElementAnimationProps(2)"
-          class="auth-form__formfield mb-8 w-full">
+        <motion.div v-bind="getElementAnimationProps(2)" class="mb-8 w-full">
           <FormField
             v-slot="$field"
             :validateOnValueUpdate="false"
             validateOnBlur
             name="email">
-            <FloatLabel class="app-input text-base">
+            <FloatLabel class="text-base">
               <InputText
                 id="auth-form-email"
                 v-tooltip.top="{
@@ -116,26 +138,25 @@ const loginSubmit = async (e) => {
                 }"
                 :invalid="$field?.invalid"
                 fluid
-                class="rounded-xl" />
+                class="rounded-xl border-gray-300 focus:border-primary-500 focus:ring-2 focus:ring-primary-100" />
               <Message
-                class="app-input-message text-base"
+                class="text-base mt-2"
                 :severity="$field?.invalid ? 'error' : 'contrast'"
                 variant="simple"
                 size="small"
                 v-if="$field?.invalid && $field.error?.message">
                 {{ $field.error?.message }}
               </Message>
-              <label for="auth-form-email" class="text-sm">Email</label>
+              <label for="auth-form-email" class="text-sm text-gray-600"
+                >Email</label
+              >
             </FloatLabel>
           </FormField>
         </motion.div>
 
-        <!-- Поле Password с анимацией (индекс 3) -->
-        <motion.div
-          v-bind="getElementAnimationProps(3)"
-          class="auth-form__formfield">
+        <motion.div v-bind="getElementAnimationProps(3)" class="mb-6 w-full">
           <FormField v-slot="$field" validateOnValueUpdate name="password">
-            <FloatLabel class="app-input text-base">
+            <FloatLabel class="text-base">
               <Password
                 id="auth-form-password"
                 type="text"
@@ -146,33 +167,41 @@ const loginSubmit = async (e) => {
                 :feedback="false"
                 toggleMask
                 fluid
-                class="rounded-xl" />
+                class="rounded-xl [&_.p-password-input]:border-gray-300 [&_.p-password-input]:focus:border-primary-500 [&_.p-password-input]:focus:ring-2 [&_.p-password-input]:focus:ring-primary-100" />
               <Message
-                class="app-input-message text-base"
+                class="text-base mt-2"
                 :severity="$field?.invalid ? 'error' : 'contrast'"
                 variant="simple"
                 size="small"
                 v-if="$field?.invalid && $field.error?.message">
                 {{ $field.error?.message }}
               </Message>
-              <label for="auth-form-password" class="text-sm">Пароль</label>
+              <label for="auth-form-password" class="text-sm text-gray-600"
+                >Пароль</label
+              >
             </FloatLabel>
           </FormField>
         </motion.div>
 
-        <!-- Кнопка с анимацией (индекс 4) -->
-        <motion.div v-bind="getElementAnimationProps(4)">
+        <motion.div v-bind="getElementAnimationProps(4)" class="w-full">
           <Button
-            class="auth-form__submit mt-6 w-fit h-[3.25rem] p-4 rounded-xl text-base"
+            class="w-full h-[3.25rem] p-4 rounded-xl text-base font-medium bg-primary-500 hover:bg-primary-600 disabled:bg-gray-300 disabled:text-gray-500 transition-colors duration-200"
             type="submit"
             label="Войти в систему"
-            :loading="loginUserIsPending">
+            :loading="loginUserIsPending"
+            :disabled="loginUserIsPending">
             <template #loadingicon>
-              <!-- <i-custom-dot-loader /> -->
+              <ProgressSpinner
+                style="width: 20px; height: 20px"
+                stroke-width="4" />
             </template>
           </Button>
         </motion.div>
       </Form>
     </motion.div>
+
+    <Toast
+      position="top-right"
+      class="z-50 [&_.p-toast-message]:rounded-xl [&_.p-toast-message]:shadow-lg [&_.p-toast-message-content]:p-4" />
   </div>
 </template>

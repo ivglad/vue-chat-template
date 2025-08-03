@@ -2,6 +2,8 @@
 /.vscode
 /.cursor
 /.cursorrules
+/.kiro/hooks/*
+/.crush
 **/node_modules
 **/vendor
 
