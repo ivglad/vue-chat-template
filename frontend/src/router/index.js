@@ -20,13 +20,8 @@ const routes = [
   {
     path: '/chat',
     name: 'Чат',
-    component: () => import('@/views/ChatRefactored.vue'),
+    component: () => import('@/views/Chat.vue'),
   },
-  // {
-  //   path: '/ui',
-  //   name: 'Ui',
-  //   component: () => import('@/views/Ui.vue'),
-  // },
 ]
 
 const router = createRouter({

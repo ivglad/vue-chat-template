@@ -9,11 +9,7 @@ const { scrollToBottom, initScrollContainer } = useChatScroll()
 
 // Убираем сложную обработку ошибок - теперь просто показываем toast
 
-const isLoadingForMessage = computed(() => {
-  return (messageId) => {
-    return chatStore.loadingMessageId === messageId
-  }
-})
+// Убираем старую логику isLoadingForMessage, теперь состояние хранится в самих сообщениях
 
 /**
  * Обработать отправку сообщения
@@ -21,30 +17,43 @@ const isLoadingForMessage = computed(() => {
  */
 const handleSendMessage = async (messageData) => {
   try {
+    // Сразу прокручиваем вниз после добавления локального сообщения
+    nextTick(() => {
+      scrollToBottom({ smooth: true })
+    })
+
     await sendMessage(messageData)
 
-    // Прокручиваем вниз после отправки
-    setTimeout(() => {
-      scrollToBottom({ smooth: true, delay: 100 })
-    }, 200)
+    // Прокручиваем вниз после получения ответа
+    nextTick(() => {
+      setTimeout(() => {
+        scrollToBottom({ smooth: true })
+      }, 100)
+    })
   } catch (error) {
     console.error('Failed to send message:', error)
   }
 }
 
+// Убрали функцию handleRetryMessage - функциональность повтора не нужна
+
 // Убрали функцию handleRetry - теперь ошибки показываются только через toast
 
-// Автоматически прокручиваем вниз при новых сообщениях
+// Автоматически прокручиваем вниз при изменениях в сообщениях
 watch(
-  () => messages.value.length,
-  (newLength, oldLength) => {
-    if (newLength > oldLength) {
-      // Небольшая задержка для завершения анимаций
-      setTimeout(() => {
-        scrollToBottom({ smooth: true })
-      }, 300)
+  () => messages.value,
+  (newMessages, oldMessages) => {
+    // Прокручиваем только если добавились новые сообщения или изменилось содержимое
+    if (newMessages.length !== oldMessages?.length) {
+      // Небольшая задержка для завершения рендеринга
+      nextTick(() => {
+        setTimeout(() => {
+          scrollToBottom({ smooth: true })
+        }, 100)
+      })
     }
   },
+  { deep: true },
 )
 
 onMounted(() => {
@@ -72,8 +81,7 @@ onUnmounted(() => {
       ref="messagesListRef"
       :messages="messages"
       :is-loading="isLoading"
-      :has-messages="hasMessages"
-      :is-loading-for-message="isLoadingForMessage" />
+      :has-messages="hasMessages" />
 
     <ChatInput :disabled="isLoading" @send-message="handleSendMessage" />
   </div>

@@ -1,5 +1,6 @@
 <script setup>
 import { motion } from 'motion-v'
+import { useAuthErrorHandler } from '@/composables/auth/useAuthErrorHandler'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -13,7 +14,7 @@ const { getElementAnimationProps } = usePageTransition({
 })
 
 // Композабл для обработки ошибок (по аналогии с чатом)
-const { handleError, clearError } = useAuthErrorHandler()
+const { handleAuthError, clearError } = useAuthErrorHandler()
 
 const initialValues = ref({
   email: '',
@@ -55,7 +56,7 @@ const loginSubmit = async (e) => {
     {
       onError: (error) => {
         // Обрабатываем ошибку через композабл
-        handleError(error, {
+        handleAuthError(error, {
           action: 'login',
           context: { email: email.value },
         })

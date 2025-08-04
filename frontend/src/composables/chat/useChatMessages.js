@@ -63,7 +63,21 @@ export function useChatMessages() {
     historyData,
     (newData) => {
       if (newData?.messages) {
-        chatStore.setMessages(newData.messages)
+        // НЕ заменяем все сообщения, если есть локальные сообщения
+        const currentMessages = chatStore.messages
+        const hasLocalMessages = currentMessages.some(
+          (msg) =>
+            msg.isLocal ||
+            msg.status === 'local' ||
+            msg.status === 'sending' ||
+            msg.status === 'loading' ||
+            msg.status === 'error',
+        )
+
+        // Если есть локальные сообщения, не перезаписываем историю
+        if (!hasLocalMessages) {
+          chatStore.setMessages(newData.messages)
+        }
       }
     },
     { immediate: true },
@@ -85,80 +99,30 @@ export function useChatMessages() {
   })
 
   // ============================================================================
-  // Local Message Management
+  // New Message Management with States
   // ============================================================================
-
-  const localMessages = new Map()
-
-  /**
-   * Добавить локальное сообщение для мгновенного отображения
-   * @param {Object} messageData - данные сообщения
-   * @returns {string} localId - локальный ID сообщения
-   */
-  const addLocalMessage = (messageData) => {
-    const localId = `local_${Date.now()}_${Math.random()
-      .toString(36)
-      .substring(2, 11)}`
-
-    const localMessage = {
-      id: localId,
-      message: messageData.message,
-      type: 'user',
-      created_at: new Date().toISOString(),
-      isLocal: true,
-      context_documents: messageData.documents?.map((doc) => doc.label) || null,
-      replies: [],
-    }
-
-    localMessages.set(localId, localMessage)
-    chatStore.addMessage(localMessage)
-
-    return localId
-  }
-
-  /**
-   * Удалить локальное сообщение
-   * @param {string} localId - локальный ID сообщения
-   */
-  const removeLocalMessage = (localId) => {
-    if (localMessages.has(localId)) {
-      localMessages.delete(localId)
-      chatStore.removeMessage(localId)
-    }
-  }
-
-  /**
-   * Заменить локальное сообщение на серверное
-   * @param {string} localId - локальный ID
-   * @param {Object} serverMessage - сообщение с сервера
-   */
-  const replaceLocalMessage = (localId, serverMessage) => {
-    removeLocalMessage(localId)
-    chatStore.addMessage(serverMessage)
-
-    // Добавляем ответы если есть
-    if (serverMessage.replies && serverMessage.replies.length > 0) {
-      serverMessage.replies.forEach((reply) => {
-        chatStore.addReply(serverMessage.id, reply)
-      })
-    }
-  }
 
   // ============================================================================
   // Message Actions
   // ============================================================================
 
   /**
-   * Отправить сообщение
+   * Отправить сообщение с новой логикой состояний
    * @param {Object} messageData - данные сообщения
    * @returns {Promise}
    */
   const sendMessage = async (messageData) => {
-    // Добавляем локальное сообщение для мгновенного отображения
-    const localId = addLocalMessage(messageData)
+    // 1. Создаем локальное сообщение пользователя (мгновенно отображается)
+    const userMessage = chatStore.createLocalUserMessage(messageData)
 
-    // Устанавливаем состояние загрузки
-    chatStore.setLoading(true, localId)
+    // 2. Создаем загрузочное сообщение бота
+    const loadingMessage = chatStore.createLoadingBotMessage(userMessage.id)
+
+    // 3. Небольшая задержка, чтобы пользователь увидел локальное сообщение
+    await new Promise((resolve) => setTimeout(resolve, 100))
+
+    // 4. Обновляем статус пользовательского сообщения на "отправляется"
+    chatStore.updateMessageStatus(userMessage.id, 'sending')
     chatStore.clearError()
 
     try {
@@ -169,26 +133,30 @@ export function useChatMessages() {
         })
       })
 
-      // Заменяем локальное сообщение на серверное
-      if (response?.data?.data?.user_message) {
-        replaceLocalMessage(localId, response.data.data.user_message)
+      if (
+        response?.data?.data?.user_message &&
+        response?.data?.data?.bot_response
+      ) {
+        // 5. Обновляем статус пользовательского сообщения на "отправлено"
+        chatStore.updateMessageStatus(userMessage.id, 'sent')
 
-        // Добавляем ответ бота если есть
-        if (response.data.data.bot_response) {
-          chatStore.addReply(
-            response.data.data.user_message.id,
-            response.data.data.bot_response,
-          )
-        }
+        // 6. Заменяем загрузочное сообщение на реальный ответ бота
+        chatStore.replaceLoadingMessage(
+          loadingMessage.id,
+          response.data.data.bot_response,
+        )
+
+        // 7. Обновляем статус пользовательского сообщения на "получен ответ"
+        chatStore.updateMessageStatus(userMessage.id, 'replied')
       }
 
       return response
     } catch (error) {
-      // Удаляем локальное сообщение при ошибке
-      removeLocalMessage(localId)
+      // При ошибке НЕ удаляем локальное сообщение пользователя!
+      // Заменяем загрузочное сообщение на сообщение об ошибке
+      chatStore.replaceLoadingMessageWithError(loadingMessage.id)
+      chatStore.updateMessageStatus(userMessage.id, 'replied')
       throw error
-    } finally {
-      chatStore.setLoading(false)
     }
   }
 
@@ -240,8 +208,6 @@ export function useChatMessages() {
     sendMessage,
     clearHistory,
     refreshMessages,
-    addLocalMessage,
-    removeLocalMessage,
 
     // Store actions (для прямого доступа если нужно)
     addMessage: chatStore.addMessage,

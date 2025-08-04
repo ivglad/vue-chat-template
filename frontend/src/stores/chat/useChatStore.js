@@ -19,6 +19,9 @@ export const useChatStore = defineStore('chat', () => {
   const isTyping = ref(false)
   const loadingMessageId = ref(null)
 
+  // Счетчик для локальных ID
+  let localIdCounter = 0
+
   // ============================================================================
   // Getters
   // ============================================================================
@@ -182,6 +185,143 @@ export const useChatStore = defineStore('chat', () => {
     isTyping.value = typing
   }
 
+  /**
+   * Создать локальное сообщение пользователя
+   * @param {Object} messageData - данные сообщения
+   * @returns {Object} созданное сообщение
+   */
+  const createLocalUserMessage = (messageData) => {
+    const localId = `local_${Date.now()}_${++localIdCounter}`
+
+    const localMessage = {
+      id: localId,
+      message: messageData.message,
+      type: 'user',
+      status: 'local',
+      isLoading: false,
+      loadingText: '',
+      context_documents: messageData.documents?.map((doc) => doc.label) || null,
+      created_at: new Date().toISOString(),
+      parentId: null,
+      replies: [],
+      isLocal: true,
+    }
+
+    addMessage(localMessage)
+    return localMessage
+  }
+
+  /**
+   * Создать загрузочное сообщение бота
+   * @param {string} parentId - ID родительского сообщения
+   * @returns {Object} созданное загрузочное сообщение
+   */
+  const createLoadingBotMessage = (parentId) => {
+    const loadingId = `loading_${Date.now()}_${++localIdCounter}`
+
+    const loadingMessage = {
+      id: loadingId,
+      message: '',
+      type: 'bot',
+      status: 'loading',
+      isLoading: true,
+      loadingText: 'Осуществляется поиск...',
+      context_documents: null,
+      created_at: new Date().toISOString(),
+      parentId: parentId,
+      replies: [],
+      isLocal: true,
+    }
+
+    addMessage(loadingMessage)
+    return loadingMessage
+  }
+
+  /**
+   * Обновить статус сообщения
+   * @param {string} messageId - ID сообщения
+   * @param {string} status - новый статус
+   */
+  const updateMessageStatus = (messageId, status) => {
+    const messageIndex = messages.value.findIndex((m) => m.id === messageId)
+    if (messageIndex !== -1) {
+      const updatedMessage = {
+        ...messages.value[messageIndex],
+        status: status,
+      }
+
+      messages.value = [
+        ...messages.value.slice(0, messageIndex),
+        updatedMessage,
+        ...messages.value.slice(messageIndex + 1),
+      ]
+    }
+  }
+
+  /**
+   * Заменить загрузочное сообщение на реальный ответ бота
+   * @param {string} loadingMessageId - ID загрузочного сообщения
+   * @param {Object} botResponse - ответ бота с сервера
+   */
+  const replaceLoadingMessage = (loadingMessageId, botResponse) => {
+    const messageIndex = messages.value.findIndex(
+      (m) => m.id === loadingMessageId,
+    )
+    if (messageIndex !== -1) {
+      // Сначала обновляем существующее сообщение, сохраняя его структуру
+      const currentMessage = messages.value[messageIndex]
+      const updatedMessage = {
+        ...currentMessage,
+        id: botResponse.id,
+        message: botResponse.message,
+        status: 'replied',
+        isLoading: false,
+        loadingText: 'Вот что я нашёл по этому вопросу',
+        context_documents: botResponse.context_documents,
+        // ВАЖНО: Сохраняем оригинальное время создания загрузочного сообщения
+        // чтобы не нарушить порядок сортировки
+        created_at: currentMessage.created_at,
+        isLocal: false,
+      }
+
+      messages.value = [
+        ...messages.value.slice(0, messageIndex),
+        updatedMessage,
+        ...messages.value.slice(messageIndex + 1),
+      ]
+    }
+  }
+
+  /**
+   * Заменить загрузочное сообщение на сообщение об ошибке
+   * @param {string} loadingMessageId - ID загрузочного сообщения
+   */
+  const replaceLoadingMessageWithError = (loadingMessageId) => {
+    const messageIndex = messages.value.findIndex(
+      (m) => m.id === loadingMessageId,
+    )
+    if (messageIndex !== -1) {
+      const currentMessage = messages.value[messageIndex]
+      const errorMessage = {
+        ...currentMessage,
+        id: `error_${Date.now()}_${++localIdCounter}`,
+        message: '',
+        status: 'error',
+        isLoading: false,
+        loadingText: 'Произошла ошибка',
+        context_documents: null,
+        created_at: currentMessage.created_at,
+        isLocal: false,
+      }
+
+      messages.value = [
+        ...messages.value.slice(0, messageIndex),
+        errorMessage,
+        ...messages.value.slice(messageIndex + 1),
+      ]
+    }
+  }
+
   // ============================================================================
   // Return
   // ============================================================================
@@ -211,5 +351,10 @@ export const useChatStore = defineStore('chat', () => {
     setError,
     clearError,
     setTyping,
+    createLocalUserMessage,
+    createLoadingBotMessage,
+    updateMessageStatus,
+    replaceLoadingMessage,
+    replaceLoadingMessageWithError,
   }
 })

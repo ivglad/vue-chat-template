@@ -2,7 +2,8 @@
 /.vscode
 /.cursor
 /.cursorrules
-/.kiro/hooks/*
+/.kiro
+/.serena
 /.crush
 **/node_modules
 **/vendor

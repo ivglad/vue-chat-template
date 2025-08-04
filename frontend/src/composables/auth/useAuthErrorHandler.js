@@ -1,208 +1,229 @@
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 
 /**
- * Композабл для обработки ошибок авторизации
- * Следует принципам централизованной обработки ошибок
- * Аналогичен useChatErrorHandler но для авторизации
+ * Композабл для обработки ошибок аутентификации
+ * Централизует логику обработки и отображения ошибок авторизации
  */
-export const useAuthErrorHandler = () => {
-  // ============================================================================
-  // State
-  // ============================================================================
-  
+export function useAuthErrorHandler() {
+  const toast = useToast()
   const lastError = ref(null)
-  const errorHistory = ref([])
-  
-  // ============================================================================
-  // Computed
-  // ============================================================================
-  
-  const hasError = computed(() => lastError.value !== null)
-  
-  const canRetry = computed(() => {
-    if (!lastError.value) return false
-    
-    const retryableErrors = [
-      'network_error',
-      'timeout_error',
-      'server_error'
-    ]
-    
-    return retryableErrors.includes(lastError.value.type)
-  })
-  
-  const errorMessage = computed(() => {
-    if (!lastError.value) return ''
-    
-    return lastError.value.message || 'Произошла неизвестная ошибка'
-  })
-  
-  // ============================================================================
-  // Methods
-  // ============================================================================
-  
+  const isHandlingError = ref(false)
+
   /**
-   * Обработать ошибку
+   * Типы ошибок аутентификации
+   */
+  const ERROR_TYPES = {
+    INVALID_CREDENTIALS: 'invalid_credentials',
+    NETWORK_ERROR: 'network_error',
+    SERVER_ERROR: 'server_error',
+    VALIDATION_ERROR: 'validation_error',
+    TOKEN_EXPIRED: 'token_expired',
+    UNAUTHORIZED: 'unauthorized',
+    FORBIDDEN: 'forbidden',
+    UNKNOWN: 'unknown',
+  }
+
+  /**
+   * Сообщения об ошибках для пользователя
+   */
+  const ERROR_MESSAGES = {
+    [ERROR_TYPES.INVALID_CREDENTIALS]: 'Неверный логин или пароль',
+    [ERROR_TYPES.NETWORK_ERROR]:
+      'Ошибка сети. Проверьте подключение к интернету',
+    [ERROR_TYPES.SERVER_ERROR]: 'Ошибка сервера. Попробуйте позже',
+    [ERROR_TYPES.VALIDATION_ERROR]: 'Проверьте правильность введенных данных',
+    [ERROR_TYPES.TOKEN_EXPIRED]: 'Сессия истекла. Войдите в систему заново',
+    [ERROR_TYPES.UNAUTHORIZED]: 'Необходима авторизация',
+    [ERROR_TYPES.FORBIDDEN]: 'Недостаточно прав доступа',
+    [ERROR_TYPES.UNKNOWN]: 'Произошла неизвестная ошибка',
+  }
+
+  /**
+   * Определить тип ошибки на основе объекта ошибки
    * @param {Error|Object} error - объект ошибки
-   * @param {Object} context - контекст ошибки
-   */
-  const handleError = (error, context = {}) => {
-    const processedError = processError(error, context)
-    
-    lastError.value = processedError
-    errorHistory.value.push({
-      ...processedError,
-      timestamp: new Date().toISOString()
-    })
-    
-    // Ограничиваем историю ошибок
-    if (errorHistory.value.length > 10) {
-      errorHistory.value = errorHistory.value.slice(-10)
-    }
-    
-    console.error('Auth Error:', processedError)
-  }
-  
-  /**
-   * Обработать объект ошибки
-   * @param {Error|Object} error - ошибка
-   * @param {Object} context - контекст
-   * @returns {Object} обработанная ошибка
-   */
-  const processError = (error, context) => {
-    const baseError = {
-      id: Date.now(),
-      context,
-      timestamp: new Date().toISOString()
-    }
-    
-    // Обработка HTTP ошибок
-    if (error?.response) {
-      const status = error.response.status
-      const data = error.response.data
-      
-      return {
-        ...baseError,
-        type: getErrorTypeByStatus(status),
-        message: data?.message || getDefaultMessageByStatus(status),
-        status,
-        details: data
-      }
-    }
-    
-    // Обработка сетевых ошибок
-    if (error?.code === 'NETWORK_ERROR' || error?.message?.includes('Network Error')) {
-      return {
-        ...baseError,
-        type: 'network_error',
-        message: 'Ошибка сети. Проверьте подключение к интернету.'
-      }
-    }
-    
-    // Обработка ошибок таймаута
-    if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout')) {
-      return {
-        ...baseError,
-        type: 'timeout_error',
-        message: 'Превышено время ожидания. Попробуйте еще раз.'
-      }
-    }
-    
-    // Обработка общих ошибок
-    return {
-      ...baseError,
-      type: 'unknown_error',
-      message: error?.message || 'Произошла неизвестная ошибка'
-    }
-  }
-  
-  /**
-   * Получить тип ошибки по HTTP статусу
-   * @param {number} status - HTTP статус
    * @returns {string} тип ошибки
    */
-  const getErrorTypeByStatus = (status) => {
-    if (status >= 400 && status < 500) {
-      return 'client_error'
+  const getErrorType = (error) => {
+    if (!error) return ERROR_TYPES.UNKNOWN
+
+    // Проверяем HTTP статус коды
+    if (error.response?.status) {
+      const status = error.response.status
+      switch (status) {
+        case 401:
+          return ERROR_TYPES.UNAUTHORIZED
+        case 403:
+          return ERROR_TYPES.FORBIDDEN
+        case 422:
+          return ERROR_TYPES.VALIDATION_ERROR
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return ERROR_TYPES.SERVER_ERROR
+        default:
+          break
+      }
     }
-    if (status >= 500) {
-      return 'server_error'
+
+    // Проверяем сообщения об ошибках
+    const message = error.message?.toLowerCase() || ''
+    if (message.includes('network') || message.includes('fetch')) {
+      return ERROR_TYPES.NETWORK_ERROR
     }
-    return 'unknown_error'
+    if (message.includes('credentials') || message.includes('password')) {
+      return ERROR_TYPES.INVALID_CREDENTIALS
+    }
+    if (message.includes('token') || message.includes('expired')) {
+      return ERROR_TYPES.TOKEN_EXPIRED
+    }
+
+    // Проверяем кастомные типы ошибок
+    if (error.type && ERROR_TYPES[error.type.toUpperCase()]) {
+      return error.type.toLowerCase()
+    }
+
+    return ERROR_TYPES.UNKNOWN
   }
-  
+
   /**
-   * Получить сообщение по умолчанию для HTTP статуса
-   * @param {number} status - HTTP статус
-   * @returns {string} сообщение
+   * Получить пользовательское сообщение об ошибке
+   * @param {string} errorType - тип ошибки
+   * @param {Error|Object} originalError - оригинальная ошибка
+   * @returns {string} сообщение для пользователя
    */
-  const getDefaultMessageByStatus = (status) => {
-    const messages = {
-      400: 'Неверные данные запроса',
-      401: 'Неверные учетные данные',
-      403: 'Доступ запрещен',
-      404: 'Ресурс не найден',
-      422: 'Ошибка валидации данных',
-      429: 'Слишком много запросов. Попробуйте позже.',
-      500: 'Внутренняя ошибка сервера',
-      502: 'Сервер недоступен',
-      503: 'Сервис временно недоступен'
+  const getErrorMessage = (errorType, originalError) => {
+    // Если есть кастомное сообщение в ошибке
+    if (originalError?.response?.data?.message) {
+      return originalError.response.data.message
     }
-    
-    return messages[status] || `Ошибка ${status}`
+    if (originalError?.userMessage) {
+      return originalError.userMessage
+    }
+
+    return ERROR_MESSAGES[errorType] || ERROR_MESSAGES[ERROR_TYPES.UNKNOWN]
   }
-  
+
+  /**
+   * Обработать ошибку аутентификации
+   * @param {Error|Object} error - объект ошибки
+   * @param {Object} options - дополнительные опции
+   * @param {string} options.action - действие, при котором произошла ошибка
+   * @param {boolean} options.showToast - показывать ли toast уведомление
+   * @param {Function} options.onError - кастомный обработчик ошибки
+   */
+  const handleAuthError = (error, options = {}) => {
+    const { action = 'authentication', showToast = true, onError } = options
+
+    if (isHandlingError.value) return
+
+    isHandlingError.value = true
+    lastError.value = error
+
+    try {
+      const errorType = getErrorType(error)
+      const errorMessage = getErrorMessage(errorType, error)
+
+      console.error(`Auth error during ${action}:`, {
+        type: errorType,
+        message: errorMessage,
+        originalError: error,
+      })
+
+      // Показываем toast уведомление
+      if (showToast) {
+        toast.add({
+          severity: 'error',
+          summary: 'Ошибка авторизации',
+          detail: errorMessage,
+          life: 5000,
+        })
+      }
+
+      // Вызываем кастомный обработчик если есть
+      if (onError && typeof onError === 'function') {
+        onError(error, errorType, errorMessage)
+      }
+
+      // Специальная обработка для истекших токенов
+      if (
+        errorType === ERROR_TYPES.TOKEN_EXPIRED ||
+        errorType === ERROR_TYPES.UNAUTHORIZED
+      ) {
+        // Здесь можно добавить логику для редиректа на страницу входа
+        // или обновления токена
+      }
+    } catch (handlingError) {
+      console.error('Error while handling auth error:', handlingError)
+    } finally {
+      isHandlingError.value = false
+    }
+  }
+
   /**
    * Очистить последнюю ошибку
    */
   const clearError = () => {
     lastError.value = null
   }
-  
+
   /**
-   * Очистить всю историю ошибок
+   * Проверить, можно ли повторить операцию после ошибки
+   * @param {string} errorType - тип ошибки
+   * @returns {boolean} можно ли повторить
    */
-  const clearErrorHistory = () => {
-    errorHistory.value = []
-    lastError.value = null
+  const canRetry = (errorType) => {
+    const retryableErrors = [
+      ERROR_TYPES.NETWORK_ERROR,
+      ERROR_TYPES.SERVER_ERROR,
+    ]
+    return retryableErrors.includes(errorType)
   }
-  
+
   /**
-   * Получить статистику ошибок
-   * @returns {Object} статистика
+   * Получить рекомендации по исправлению ошибки
+   * @param {string} errorType - тип ошибки
+   * @returns {string} рекомендации для пользователя
    */
-  const getErrorStats = () => {
-    const stats = {
-      total: errorHistory.value.length,
-      byType: {},
-      recent: errorHistory.value.slice(-5)
+  const getErrorSuggestion = (errorType) => {
+    const suggestions = {
+      [ERROR_TYPES.INVALID_CREDENTIALS]:
+        'Проверьте правильность введенного логина и пароля',
+      [ERROR_TYPES.NETWORK_ERROR]:
+        'Проверьте подключение к интернету и попробуйте еще раз',
+      [ERROR_TYPES.SERVER_ERROR]:
+        'Попробуйте обновить страницу или повторить попытку позже',
+      [ERROR_TYPES.VALIDATION_ERROR]:
+        'Убедитесь, что все поля заполнены корректно',
+      [ERROR_TYPES.TOKEN_EXPIRED]: 'Войдите в систему заново',
+      [ERROR_TYPES.UNAUTHORIZED]:
+        'Войдите в систему для доступа к этой функции',
+      [ERROR_TYPES.FORBIDDEN]:
+        'Обратитесь к администратору для получения доступа',
     }
-    
-    errorHistory.value.forEach(error => {
-      stats.byType[error.type] = (stats.byType[error.type] || 0) + 1
-    })
-    
-    return stats
+
+    return (
+      suggestions[errorType] ||
+      'Попробуйте обновить страницу или обратитесь в поддержку'
+    )
   }
-  
-  // ============================================================================
-  // Return
-  // ============================================================================
-  
+
   return {
     // State
     lastError,
-    errorHistory,
-    
-    // Computed
-    hasError,
-    canRetry,
-    errorMessage,
-    
+    isHandlingError,
+
+    // Constants
+    ERROR_TYPES,
+    ERROR_MESSAGES,
+
     // Methods
-    handleError,
+    handleAuthError,
     clearError,
-    clearErrorHistory,
-    getErrorStats
+    getErrorType,
+    getErrorMessage,
+    canRetry,
+    getErrorSuggestion,
   }
 }

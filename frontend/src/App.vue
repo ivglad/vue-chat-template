@@ -7,7 +7,6 @@ const isDarkMode = computed(() => {
 provide('isDarkMode', isDarkMode)
 
 // Управление переходами между страницами
-const route = useRoute()
 const router = useRouter()
 
 const transitionType = ref('fade')
@@ -90,7 +89,9 @@ const pageTransition = computed(() => {
             </template>
           </Button>
         </div>
-        <div v-if="message.detail" class="app-toast-detail p-toast-detail">
+        <div
+          v-if="message.detail"
+          class="app-toast-detail p-toast-detail text-color">
           {{ message.detail }}
         </div>
       </div>
