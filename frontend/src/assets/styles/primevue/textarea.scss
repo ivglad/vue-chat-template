@@ -1,5 +1,8 @@
 @layer preset {
   .p-textarea {
     width: 100%;
+    &::placeholder {
+      color: var(--p-text-color);
+    }
   }
 }

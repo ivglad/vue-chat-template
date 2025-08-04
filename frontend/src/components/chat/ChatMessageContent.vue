@@ -77,7 +77,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="text-base leading-relaxed">
+  <div class="leading-relaxed">
     <div
       v-if="type === 'user'"
       class="whitespace-pre-wrap break-words"

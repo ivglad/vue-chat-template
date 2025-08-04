@@ -48,9 +48,10 @@ defineExpose({
 <template>
   <div
     ref="messagesContainer"
-    class="flex-1 overflow-y-auto px-6 py-6 space-y-4 scroll-smooth"
+    class="flex-1 items w-full overflow-y-auto px-6 py-6 space-y-4 scroll-smooth"
     :class="containerClasses"
     @scroll="handleScroll">
+
     <ChatEmptyState v-if="!hasMessages && !isLoading" />
 
     <div v-else ref="messagesChildContainer">
@@ -64,9 +65,11 @@ defineExpose({
           <ChatMessage
             :message="message"
             :index="index"
-            :show-loading="isLoadingForMessage(message.id)" />
+            :show-loading="isLoadingForMessage(message.id)"
+            class="max-w-[70rem] justify-self-center" />
         </template>
       </AnimatedList>
+      <Divider class="bg-surface-400" />
     </div>
 
     <div

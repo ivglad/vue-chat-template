@@ -2,7 +2,6 @@
 import { onClickOutside } from '@vueuse/core'
 import { AnimatePresence } from 'motion-v'
 import { useDocuments } from '@/helpers/api/queries'
-import ChatDocumentSelector from './ChatDocumentSelector.vue'
 
 const emit = defineEmits(['send-message'])
 
@@ -120,38 +119,56 @@ watch(
 </script>
 
 <template>
-  <div ref="inputContainer" class="relative px-6 pb-4">
+  <div ref="inputContainer" class="relative w-full pb-4 px-6 rounded-t-2xl">
     <AnimatePresence>
       <AnimatedContainer
         v-if="showDocumentsMenu"
         preset="slideUp"
-        container-class="absolute bottom-full left-6 w-fit mb-4">
-        <ChatDocumentSelector
+        container-class="absolute bottom-full w-fit mb-4">
+        <Listbox
           v-model="selectedDocuments"
-          :documents="documents"
-          :loading="documentsLoading"
-          @close="closeDocumentsMenu" />
+          :options="documents"
+          multiple
+          optionLabel="label"
+          listStyle="max-height:200px"
+          class="w-[250px] max-w-[250px] border-none rounded-2xl"
+          :pt="{
+            root: 'bg-white rounded-2xl shadow-lg',
+            list: 'p-2 overflow-hidden',
+            option:
+              'block rounded-xl text-nowrap text-ellipsis p-3 hover:bg-[#EDEFF6] transition-colors duration-150',
+            optionLabel: 'font-medium text-gray-900 truncate',
+          }"
+          @change="closeDocumentsMenu">
+          <template #empty>
+            <div
+              class="flex flex-col items-center justify-center py-8 text-gray-500">
+              <i-custom-doc class="text-2xl text-color-muted" />
+              <span class="mt-2 text-sm">Нет доступных документов</span>
+            </div>
+          </template>
+        </Listbox>
       </AnimatedContainer>
     </AnimatePresence>
 
     <AnimatedContainer
       preset="layoutShift"
-      container-class="bg-white rounded-2xl p-2 transition-all duration-200">
+      container-class="w-full max-w-[70rem] justify-self-center bg-white rounded-2xl p-2 transition-all duration-200">
       <AnimatePresence>
         <AnimatedList
           v-if="selectedDocuments.length > 0"
           :items="selectedDocuments"
           item-preset="documentSlide"
           :stagger-delay="0.05"
-          container-class="flex flex-wrap gap-2 mb-3">
+          container-class="flex flex-col gap-2 mb-2.5"
+          item-class="w-full">
           <template #item="{ item: document }">
             <div
-              class="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+              class="flex w-full items-center gap-2.5 bg-[#EDEFF6] p-3 rounded-xl">
+              <i-custom-doc class="text-primary-500" />
               <span>{{ document.title }}</span>
-              <button
-                @click="removeDocument(document.id)"
-                class="hover:bg-blue-200 rounded-full p-1">
-                <i-custom-cross />
+              <button class="ml-auto cursor-pointer" @click="removeDocument(document.id)">
+                <i-custom-cross class="text-primary-500" />
               </button>
             </div>
           </template>
@@ -164,6 +181,7 @@ watch(
           class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl"
           aria-label="plus"
           outlined
+          severity="secondary"
           aria-haspopup="true"
           aria-controls="documents-menu"
           @click="toggleDocumentsMenu">
@@ -175,7 +193,7 @@ watch(
         <Textarea
           v-model="messageText"
           ref="textareaRef"
-          class="h-full px-2 py-2 border-none shadow-none transition-all"
+          class="h-full px-2 py-2 border-none shadow-none transition-all text-color"
           placeholder="Задайте вопрос..."
           rows="1"
           :disabled="disabled"
@@ -185,7 +203,7 @@ watch(
         <Button
           :disabled="!canSend"
           :loading="disabled"
-          class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl"
+          class="w-[38px] min-w-[38px] h-[38px] min-h-[38px] rounded-xl transition-all"
           aria-label="send"
           @click="handleSendMessage">
           <template #icon>

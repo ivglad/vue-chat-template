@@ -52,7 +52,11 @@ const animationDelay = computed(() => {
 
     <!-- Сообщение ассистента -->
     <div v-else>
-      <i-custom-robot-original class="w-[40px] h-[40px] flex-shrink-0" />
+      <div class="flex items-center gap-2.5">
+        <i-custom-robot-original class="w-[40px] h-[40px] flex-shrink-0" />
+        <span class="italic">Вот что я нашёл по этому вопросу</span>
+      </div>
+      <Divider class="bg-surface-400" />
       <div class="flex-1">
         <ChatMessageContent
           :content="message.message"

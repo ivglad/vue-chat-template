@@ -65,7 +65,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col relative bg-[#EDEFF6]">
+  <div class="h-full flex flex-col items-center relative bg-[#EDEFF6]">
     <ChatHeader :is-loading="isLoading" />
 
     <ChatMessagesList

@@ -74,11 +74,11 @@ export function useChatMessages() {
     const error = hError || sError || cError
     if (error) {
       if (hError) {
-        showError(error, 'Ошибка загрузки истории')
+        showError(error, 'Ошибка загрузки \nистории')
       } else if (sError) {
-        showError(error, 'Ошибка отправки сообщения')
+        showError(error, 'Ошибка отправки \nсообщения')
       } else if (cError) {
-        showError(error, 'Ошибка очистки истории')
+        showError(error, 'Ошибка очистки \nистории')
       }
       chatStore.setError(error)
     }
