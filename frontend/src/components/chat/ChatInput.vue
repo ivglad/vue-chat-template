@@ -1,7 +1,6 @@
 <script setup>
 import { onClickOutside } from '@vueuse/core'
 import { AnimatePresence } from 'motion-v'
-import { useDocuments } from '@/helpers/api/queries'
 
 const emit = defineEmits(['send-message'])
 
@@ -23,6 +22,62 @@ const { data: documentsData, isLoading: documentsLoading } = useDocuments({
   per_page: 100,
 })
 
+// Получаем доступ к сообщениям для поиска последних документов
+const { messages } = useChatMessages()
+
+// Кэш для последних найденных документов
+const lastFoundDocuments = ref([])
+
+/**
+ * Найти последние использованные документы в чате
+ * @returns {Array} массив документов в формате для selectedDocuments
+ */
+const findLastUsedDocuments = () => {
+  // Проверяем кэш
+  if (lastFoundDocuments.value.length > 0) {
+    return lastFoundDocuments.value
+  }
+
+  // Ищем последнее сообщение пользователя с документами
+  const messagesWithDocs = messages.value
+    .filter(msg => 
+      msg.type === 'user' && 
+      msg.context_documents && 
+      msg.context_documents.length > 0
+    )
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+  
+  if (messagesWithDocs.length === 0) return []
+  
+  const lastMessage = messagesWithDocs[0]
+  const foundDocuments = convertDocumentsToSelectFormat(lastMessage.context_documents)
+  
+  // Кэшируем результат
+  lastFoundDocuments.value = foundDocuments
+  
+  return foundDocuments
+}
+
+/**
+ * Преобразовать названия документов в формат для selectedDocuments
+ * @param {Array} contextDocuments - массив названий документов
+ * @returns {Array} массив объектов документов
+ */
+const convertDocumentsToSelectFormat = (contextDocuments) => {
+  if (!contextDocuments || contextDocuments.length === 0) return []
+  
+  const availableDocuments = documents.value || []
+  
+  return contextDocuments
+    .map(docName => {
+      // Ищем документ по названию
+      return availableDocuments.find(doc => 
+        doc.title === docName || doc.label === docName
+      )
+    })
+    .filter(Boolean) // убираем undefined
+}
+
 const documents = computed(() => {
   return (
     documentsData.value?.documents?.map((doc) => ({
@@ -34,12 +89,26 @@ const documents = computed(() => {
 })
 
 const canSend = computed(() => {
+  // Можно отправить если есть текст
   return messageText.value.trim().length > 0 && !props.disabled
 })
 
 // Обработать отправку сообщения
 const handleSendMessage = () => {
   if (!canSend.value) return
+
+  // Если есть текст сообщения, но нет выбранных документов, ищем последние использованные
+  if (messageText.value.trim().length > 0 && selectedDocuments.value.length === 0) {
+    const lastDocuments = findLastUsedDocuments()
+    if (lastDocuments.length > 0) {
+      selectedDocuments.value = lastDocuments
+      
+      // Показываем уведомление о автоматическом прикреплении
+      nextTick(() => {
+        console.log(`Автоматически прикреплены документы: ${lastDocuments.map(d => d.title).join(', ')}`)
+      })
+    }
+  }
 
   const messageData = {
     message: messageText.value.trim(),
@@ -56,6 +125,9 @@ const handleSendMessage = () => {
 
   // Очищаем поле ввода
   messageText.value = ''
+  
+  // Очищаем кэш найденных документов
+  lastFoundDocuments.value = []
 
   // Фокусируемся обратно на поле ввода
   nextTick(() => {
@@ -134,7 +206,7 @@ watch(
           class="w-[250px] max-w-[250px] border-none rounded-2xl"
           :pt="{
             root: 'bg-white rounded-2xl shadow-lg',
-            list: 'p-2 overflow-hidden',
+            list: `${documents.length > 4 ? 'p-2 pr-0' : 'p-2'} overflow-hidden`,
             option:
               'block rounded-xl text-nowrap text-ellipsis p-3 hover:bg-[#EDEFF6] transition-colors duration-150',
             optionLabel: 'font-medium text-gray-900 truncate',

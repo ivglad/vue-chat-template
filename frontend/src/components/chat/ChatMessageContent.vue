@@ -13,6 +13,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isNew: {
+    type: Boolean,
+    default: false,
+  },
+  messageId: {
+    type: [String, Number],
+    required: false,
+  },
   enableAnimation: {
     type: Boolean,
     default: true,
@@ -23,19 +31,38 @@ const {
   animatedWords,
   isAnimating,
   animateText,
+  animateTokens,
   resetAnimation,
   getWordClass,
 } = useTextAnimation()
 
-const { parseMarkdown } = useMarkdownParser()
+const { parseMarkdown, parse, tokensToWords, getTokenClasses } =
+  useMarkdownParser()
+
+// Импортируем store для сброса флага isNew
+const { markMessageAsAnimated } = useChatStore()
 
 const shouldAnimateText = computed(() => {
   return (
     props.type === 'bot' &&
     props.enableAnimation &&
     !props.isLocal &&
+    props.isNew && // Анимируем только новые сообщения
     props.content.length > 0
   )
+})
+
+// Computed для анимированных токенов markdown
+const animatedTokens = computed(() => {
+  if (!shouldAnimateText.value || !props.content) {
+    return []
+  }
+
+  // Парсим markdown в токены
+  const tokens = parse(props.content)
+
+  // Конвертируем токены в слова для анимации
+  return tokensToWords(tokens)
 })
 
 const formattedContent = computed(() => {
@@ -43,8 +70,14 @@ const formattedContent = computed(() => {
     return props.content
   }
 
-  // Парсим markdown для ответов бота
-  return parseMarkdown(props.content)
+  // Для статического рендера парсим markdown в HTML
+  if (!shouldAnimateText.value) {
+    return parseMarkdown(props.content)
+  }
+
+  // Для анимированного рендера возвращаем исходный текст
+  // (парсинг будет происходить в animatedTokens)
+  return props.content
 })
 
 // Запускаем анимацию при изменении контента
@@ -56,9 +89,16 @@ watch(
 
       // Небольшая задержка для плавности
       setTimeout(() => {
-        animateText(newContent, {
+        // Используем токены для анимации
+        animateTokens(animatedTokens.value, {
           wordDelay: 80,
           fadeInDuration: 250,
+          onComplete: () => {
+            // Сбрасываем флаг isNew после завершения анимации
+            if (props.messageId) {
+              markMessageAsAnimated(props.messageId)
+            }
+          },
         })
       }, 100)
     }
@@ -68,9 +108,15 @@ watch(
 
 onMounted(() => {
   if (shouldAnimateText.value && props.content) {
-    animateText(props.content, {
+    animateTokens(animatedTokens.value, {
       wordDelay: 80,
       fadeInDuration: 250,
+      onComplete: () => {
+        // Сбрасываем флаг isNew после завершения анимации
+        if (props.messageId) {
+          markMessageAsAnimated(props.messageId)
+        }
+      },
     })
   }
 })
@@ -84,18 +130,20 @@ onMounted(() => {
       v-text="content" />
 
     <div v-else-if="shouldAnimateText">
-      <span
-        v-for="(word, index) in animatedWords"
-        :key="index"
-        :class="getWordClass(word)"
-        class="inline-block mr-1">
-        {{ word.text }}
-      </span>
+      <template v-for="(word, index) in animatedWords" :key="index">
+        <br v-if="word.token?.type === 'line_break'" />
+        <div v-else-if="word.token?.type === 'paragraph'" class="h-4"></div>
+        <span
+          v-else
+          :class="[getWordClass(word), getTokenClasses(word.token)]"
+          class="inline-block mr-1">
+          {{ word.text }}
+        </span>
+      </template>
     </div>
 
     <div
       v-else
-      class="text-gray-800 prose prose-sm max-w-none [&_h1]:font-semibold [&_h1]:text-gray-900 [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h2]:font-semibold [&_h2]:text-gray-900 [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h3]:font-semibold [&_h3]:text-gray-900 [&_h3]:mt-4 [&_h3]:mb-2 [&_h3]:text-base [&_p]:mb-3 [&_p:last-child]:mb-0 [&_ul]:ml-4 [&_ul]:mb-3 [&_ol]:ml-4 [&_ol]:mb-3 [&_li]:mb-1 [&_code]:bg-surface-100 [&_code]:text-gray-800 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-sm [&_code]:font-mono [&_pre]:bg-surface-100 [&_pre]:p-3 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_pre]:mb-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_blockquote]:border-l-4 [&_blockquote]:border-surface-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-surface-600 [&_blockquote]:mb-3 [&_strong]:font-semibold [&_strong]:text-gray-900 [&_em]:italic [&_a]:text-primary-600 [&_a:hover]:text-primary-700 [&_a]:underline"
       v-html="formattedContent" />
   </div>
 </template>

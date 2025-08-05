@@ -1,15 +1,16 @@
 <script setup>
-const messagesListRef = ref(null)
 
-const chatStore = useChatStore()
+const messagesListRef = ref(null)
 
 const { messages, isLoading, hasMessages, sendMessage } = useChatMessages()
 
-const { scrollToBottom, initScrollContainer } = useChatScroll()
-
-// Убираем сложную обработку ошибок - теперь просто показываем toast
-
-// Убираем старую логику isLoadingForMessage, теперь состояние хранится в самих сообщениях
+const {
+  scrollToBottomInstant,
+  scrollToLastAssistantDividerBottom,
+  scrollToLastAssistantTitle,
+  initScrollContainer,
+  isScrolledToBottom,
+} = useChatScroll()
 
 /**
  * Обработать отправку сообщения
@@ -17,65 +18,84 @@ const { scrollToBottom, initScrollContainer } = useChatScroll()
  */
 const handleSendMessage = async (messageData) => {
   try {
-    // Сразу прокручиваем вниз после добавления локального сообщения
-    nextTick(() => {
-      scrollToBottom({ smooth: true })
-    })
-
     await sendMessage(messageData)
-
-    // Прокручиваем вниз после получения ответа
-    nextTick(() => {
-      setTimeout(() => {
-        scrollToBottom({ smooth: true })
-      }, 100)
-    })
   } catch (error) {
     console.error('Failed to send message:', error)
   }
 }
 
-// Убрали функцию handleRetryMessage - функциональность повтора не нужна
-
-// Убрали функцию handleRetry - теперь ошибки показываются только через toast
-
-// Автоматически прокручиваем вниз при изменениях в сообщениях
+// Умная логика скролла при изменении сообщений
 watch(
   () => messages.value,
   (newMessages, oldMessages) => {
-    // Прокручиваем только если добавились новые сообщения или изменилось содержимое
-    if (newMessages.length !== oldMessages?.length) {
-      // Небольшая задержка для завершения рендеринга
-      nextTick(() => {
+    if (!newMessages || newMessages.length === 0) return
+
+    nextTick(() => {
+      const oldLength = oldMessages?.length || 0
+      const newLength = newMessages.length
+
+      // Если добавились новые сообщения
+      if (newLength > oldLength) {
+        // Получаем последнее добавленное сообщение
+        const lastMessage = newMessages[newLength - 1]
+        
+        if (lastMessage.type === 'user') {
+          // При добавлении сообщения пользователя прокручиваем к разделителю
+          // Добавляем достаточную задержку для обновления DOM
+          setTimeout(() => {
+            if (!isScrolledToBottom.value) {
+              scrollToLastAssistantDividerBottom()
+            } else {
+              // Если скролл внизу, тоже прокручиваем к разделителю для консистентности
+              scrollToLastAssistantDividerBottom()
+            }
+          }, 250)
+        }
+      }
+
+      // Отдельно обрабатываем новые ответы ассистента (замена загрузочного сообщения)
+      const newBotMessages = newMessages.filter(
+        (msg) => msg.type === 'bot' && msg.isNew === true && !msg.isLoading,
+      )
+
+      if (newBotMessages.length > 0) {
+        // Прокручиваем к заголовку ассистента
         setTimeout(() => {
-          scrollToBottom({ smooth: true })
-        }, 100)
-      })
-    }
+          scrollToLastAssistantTitle()
+        }, 250)
+      }
+    })
   },
   { deep: true },
 )
 
+// При загрузке чата мгновенно прокручиваем в самый низ без плавного скролла
+watch(
+  () => hasMessages.value,
+  (newHasMessages) => {
+    if (newHasMessages && !isLoading.value) {
+      // Мгновенная прокрутка при первой загрузке сообщений
+      nextTick(() => {
+        scrollToBottomInstant()
+      })
+    }
+  },
+  { immediate: true },
+)
+
+// Инициализируем скролл контейнер при монтировании
 onMounted(() => {
-  // Инициализируем скролл контейнер
-  if (messagesListRef.value?.messagesContainer) {
-    initScrollContainer(messagesListRef.value.messagesContainer)
-  }
-
-  // Прокручиваем вниз при загрузке
-  setTimeout(() => {
-    scrollToBottom({ smooth: false })
-  }, 100)
-})
-
-onUnmounted(() => {
-  // Очистка происходит автоматически в композаблах
+  nextTick(() => {
+    if (messagesListRef.value?.messagesContainer) {
+      initScrollContainer(messagesListRef.value.messagesContainer)
+    }
+  })
 })
 </script>
 
 <template>
   <div class="h-full flex flex-col items-center relative bg-[#EDEFF6]">
-    <ChatHeader :is-loading="isLoading" />
+    <ChatHeader />
 
     <ChatMessagesList
       ref="messagesListRef"
@@ -86,14 +106,3 @@ onUnmounted(() => {
     <ChatInput :disabled="isLoading" @send-message="handleSendMessage" />
   </div>
 </template>
-
-<style scoped>
-@reference '@/assets/styles/main.css';
-
-@media (max-width: 768px) {
-  .chat-messages {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
-  }
-}
-</style>

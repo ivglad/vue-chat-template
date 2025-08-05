@@ -1,10 +1,4 @@
 <script setup>
-const props = defineProps({
-  isLoading: {
-    type: Boolean,
-    default: false,
-  },
-})
 </script>
 
 <template>

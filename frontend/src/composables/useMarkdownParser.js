@@ -199,22 +199,96 @@ export function useMarkdownParser() {
           .split(/\s+/)
           .filter((word) => word.trim())
         tokenWords.forEach((word) => {
-          words.push({ text: word, token })
+          words.push({ text: word, token, isWord: true })
         })
-      } else if (!isBlockToken(token)) {
-        // Добавляем markdown токены как отдельные "слова"
-        words.push({ text: token.content, token })
+      } else {
+        // Включаем все токены, включая блочные
+        words.push({ 
+          text: token.content || '', 
+          token, 
+          isWord: false,
+          isBlock: isBlockToken(token)
+        })
       }
     })
 
     return words
   }
 
+  /**
+   * Конвертирует токены в HTML строку
+   * @param {Array} tokens - массив токенов
+   * @returns {string} HTML строка
+   */
+  const tokensToHtml = (tokens) => {
+    let html = ''
+    let inParagraph = false
+
+    tokens.forEach((token) => {
+      switch (token.type) {
+        case TOKEN_TYPES.TEXT:
+          html += escapeHtml(token.content)
+          break
+        case TOKEN_TYPES.BOLD:
+          html += `<strong>${escapeHtml(token.content)}</strong>`
+          break
+        case TOKEN_TYPES.ITALIC:
+          html += `<em>${escapeHtml(token.content)}</em>`
+          break
+        case TOKEN_TYPES.CODE:
+          html += `<code>${escapeHtml(token.content)}</code>`
+          break
+        case TOKEN_TYPES.LINK:
+          html += `<a href="${escapeHtml(token.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(token.content)}</a>`
+          break
+        case TOKEN_TYPES.LINE_BREAK:
+          html += '<br>'
+          break
+        case TOKEN_TYPES.PARAGRAPH:
+          if (inParagraph) {
+            html += '</p>'
+          }
+          html += '<p>'
+          inParagraph = true
+          break
+      }
+    })
+
+    if (inParagraph) {
+      html += '</p>'
+    }
+
+    return html
+  }
+
+  /**
+   * Экранирует HTML символы
+   * @param {string} text - текст для экранирования
+   * @returns {string} экранированный текст
+   */
+  const escapeHtml = (text) => {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
+  }
+
+  /**
+   * Парсит markdown и возвращает HTML
+   * @param {string} text - исходный markdown текст
+   * @returns {string} HTML строка
+   */
+  const parseMarkdownToHtml = (text) => {
+    const tokens = parseMarkdown(text)
+    return tokensToHtml(tokens)
+  }
+
   return {
     parse,
+    parseMarkdown: parseMarkdownToHtml,
     getTokenClasses,
     isBlockToken,
     tokensToWords,
+    tokensToHtml,
     TOKEN_TYPES,
   }
 }

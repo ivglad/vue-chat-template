@@ -1,4 +1,5 @@
 <script setup>
+
 const props = defineProps({
   message: {
     type: Object,
@@ -9,8 +10,6 @@ const props = defineProps({
     default: 0,
   },
 })
-
-// Убираем emit для retry-message, так как функциональность повтора не нужна
 
 // Используем анимированные фразы загрузки
 const { currentPhrase, startLoadingAnimation, stopLoadingAnimation } =
@@ -31,11 +30,6 @@ const displayText = computed(() => {
     return props.message.loadingText
   }
   return props.message.message
-})
-
-const messageStatusClass = computed(() => {
-  // Все сообщения должны быть полностью видимыми, без дополнительных стилей
-  return ['opacity-100']
 })
 
 const loadingTextClass = computed(() => {
@@ -65,33 +59,26 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Единый подход для всех сообщений -->
-  <div class="w-full" :data-message-id="message.id">
-    <!-- Сообщение пользователя -->
+  <div class="w-full">
     <div v-if="message.type === 'user'" class="flex justify-end">
       <div
-        class="flex flex-col gap-2.5 max-w-[300px] p-4 bg-white rounded-2xl"
-        :class="messageStatusClass">
-        <!-- Документы выше сообщения -->
+        class="flex flex-col gap-2.5 max-w-[300px] p-4 bg-white rounded-2xl">
         <ChatMessageDocuments
           v-if="message.context_documents?.length"
           :documents="message.context_documents" />
-
-        <!-- Само сообщение -->
         <div>
           <ChatMessageContent
             :content="displayText"
             :type="message.type"
-            :is-local="message.isLocal" />
-
-          <!-- Убираем отображение ошибки из локального сообщения пользователя -->
+            :is-local="message.isLocal"
+            :is-new="message.isNew"
+            :message-id="message.id" />
         </div>
       </div>
     </div>
 
-    <!-- Сообщение ассистента -->
-    <div v-else :class="messageStatusClass">
-      <div class="flex items-center gap-2.5">
+    <div v-else>
+      <div class="assistant-title flex items-center gap-2.5">
         <i-custom-robot-original class="w-[40px] h-[40px] flex-shrink-0" />
         <span class="italic" :class="loadingTextClass">
           {{
@@ -105,14 +92,15 @@ onUnmounted(() => {
       </div>
       <Divider
         v-if="!isLoadingMessage && message.status !== 'error'"
-        class="bg-surface-400" />
+        class="assistant-divider-start bg-surface-400" />
       <div class="flex-1">
-        <!-- Показываем контент только для обычных сообщений, НЕ для ошибок -->
         <ChatMessageContent
           v-if="!isLoadingMessage && message.status !== 'error'"
           :content="message.message"
           :type="message.type"
-          :is-local="message.isLocal" />
+          :is-local="message.isLocal"
+          :is-new="message.isNew"
+          :message-id="message.id" />
       </div>
     </div>
   </div>

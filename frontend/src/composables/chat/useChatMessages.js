@@ -148,6 +148,13 @@ export function useChatMessages() {
 
         // 7. Обновляем статус пользовательского сообщения на "получен ответ"
         chatStore.updateMessageStatus(userMessage.id, 'replied')
+
+        // 8. Обновляем документы в сообщении пользователя, если они не были прикреплены
+        const serverUserMessage = response.data.data.user_message
+        if (serverUserMessage && serverUserMessage.context_documents && 
+            (!userMessage.context_documents || userMessage.context_documents.length === 0)) {
+          chatStore.updateMessageDocuments(userMessage.id, serverUserMessage.context_documents)
+        }
       }
 
       return response
@@ -215,5 +222,6 @@ export function useChatMessages() {
     setLoading: chatStore.setLoading,
     setError: chatStore.setError,
     clearError: chatStore.clearError,
+    updateMessageDocuments: chatStore.updateMessageDocuments,
   }
 }

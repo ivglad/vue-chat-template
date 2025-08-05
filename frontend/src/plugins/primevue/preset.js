@@ -496,9 +496,9 @@ const Preset = definePreset(Aura, {
         },
         highlight: {
           background: '#EDEFF6',
-          focusBackground: '{surface.100}',
-          color: '{surface.700}',
-          focusColor: '{surface.800}',
+          focusBackground: 'inherit',
+          color: 'inherit',
+          focusColor: 'inherit',
         },
         mask: {
           background: 'rgba(0,0,0,0.4)',

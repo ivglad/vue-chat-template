@@ -1,6 +1,4 @@
 <script setup>
-import ChatMessage from './ChatMessage.vue'
-import { useContainerOverflow } from '@/composables/useContainerOverflow'
 
 const props = defineProps({
   messages: {
@@ -17,8 +15,6 @@ const props = defineProps({
   },
 })
 
-// Убираем emit для retry-message, так как функциональность повтора не нужна
-
 const messagesContainer = ref(null)
 const messagesChildContainer = ref(null)
 
@@ -33,11 +29,6 @@ const { containerClasses } = useContainerOverflow(
   },
 )
 
-// Обработать скролл контейнера сообщений
-const handleScroll = () => {
-  // Логика скролла может быть добавлена здесь при необходимости
-}
-
 defineExpose({
   messagesContainer,
 })
@@ -46,9 +37,8 @@ defineExpose({
 <template>
   <div
     ref="messagesContainer"
-    class="flex-1 items w-full overflow-y-auto px-6 py-6 space-y-4 scroll-smooth"
-    :class="containerClasses"
-    @scroll="handleScroll">
+    class="flex-1 items w-full overflow-y-auto px-6 py-4 pb-0 space-y-4 scroll-smooth"
+    :class="containerClasses">
     <ChatEmptyState v-if="!hasMessages && !isLoading" />
 
     <div v-else ref="messagesChildContainer" class="space-y-4">
@@ -58,7 +48,7 @@ defineExpose({
         :message="message"
         :index="index"
         class="max-w-[70rem] justify-self-center" />
-      <Divider class="bg-surface-400" />
+      <Divider class="assistant-divider-end bg-surface-400" />
     </div>
 
     <div

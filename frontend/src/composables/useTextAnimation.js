@@ -44,9 +44,13 @@ export function useTextAnimation() {
             }
 
             // Если это последнее слово
-            if (index === words.length - 1) {
-              isAnimating.value = false
+          if (index === words.length - 1) {
+            isAnimating.value = false
+            // Вызываем callback если он передан
+            if (options.onComplete) {
+              options.onComplete()
             }
+          }
           }, fadeInDuration)
         }
       }, index * wordDelay)
@@ -69,10 +73,72 @@ export function useTextAnimation() {
     return `${baseClass} opacity-0`
   }
 
+  const animateTokens = (tokenWords, options = {}) => {
+    const {
+      wordDelay = 150, // задержка между словами в мс
+      fadeInDuration = 400, // длительность появления каждого слова
+    } = options
+
+    if (!tokenWords || tokenWords.length === 0) return
+
+    // Инициализируем массив токенов с невидимым состоянием
+    animatedWords.value = tokenWords.map((tokenWord) => ({
+      text: tokenWord.text,
+      token: tokenWord.token,
+      isWord: tokenWord.isWord,
+      isBlock: tokenWord.isBlock,
+      visible: tokenWord.isBlock, // блочные элементы видны сразу
+      animating: false,
+    }))
+
+    isAnimating.value = true
+
+    // Последовательно показываем каждое слово
+    let wordIndex = 0
+    tokenWords.forEach((tokenWord, index) => {
+      // Блочные элементы не анимируются
+      if (tokenWord.isBlock) {
+        return
+      }
+
+      setTimeout(() => {
+        if (animatedWords.value[index]) {
+          animatedWords.value[index].animating = true
+
+          // Небольшая задержка для начала анимации
+          setTimeout(() => {
+            if (animatedWords.value[index]) {
+              animatedWords.value[index].visible = true
+            }
+          }, 50)
+
+          // Завершаем анимацию
+          setTimeout(() => {
+            if (animatedWords.value[index]) {
+              animatedWords.value[index].animating = false
+            }
+
+            // Если это последнее слово
+            if (wordIndex === tokenWords.filter(tw => !tw.isBlock).length - 1) {
+              isAnimating.value = false
+              // Вызываем callback если он передан
+              if (options.onComplete) {
+                options.onComplete()
+              }
+            }
+          }, fadeInDuration)
+        }
+      }, wordIndex * wordDelay)
+
+      wordIndex++
+    })
+  }
+
   return {
     animatedWords: readonly(animatedWords),
     isAnimating: readonly(isAnimating),
     animateText,
+    animateTokens,
     resetAnimation,
     getWordClass,
   }

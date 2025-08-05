@@ -27,9 +27,52 @@ export const useChatStore = defineStore('chat', () => {
   // ============================================================================
 
   const sortedMessages = computed(() => {
-    return messages.value
+    // Используем умную сортировку, которая группирует сообщения по парам
+    const result = []
+    
+    // Сначала сортируем все сообщения по времени создания
+    const timesorted = messages.value
       .slice()
       .sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+    
+    // Группируем сообщения по парам пользователь-бот
+    const processed = new Set()
+    
+    timesorted.forEach(message => {
+      if (processed.has(message.id)) return
+      
+      if (message.type === 'user') {
+        // Добавляем сообщение пользователя
+        result.push(message)
+        processed.add(message.id)
+        
+        // Ищем соответствующий ответ бота
+        // 1. Сначала проверяем replies (для серверных данных)
+        if (message.replies && message.replies.length > 0) {
+          message.replies.forEach(reply => {
+            result.push(reply)
+            processed.add(reply.id)
+          })
+        } else {
+          // 2. Ищем бота с parentId равным ID пользователя (для локальных данных)
+          const botReply = timesorted.find(msg => 
+            msg.type === 'bot' && 
+            msg.parentId === message.id && 
+            !processed.has(msg.id)
+          )
+          if (botReply) {
+            result.push(botReply)
+            processed.add(botReply.id)
+          }
+        }
+      } else if (message.type === 'bot' && !processed.has(message.id)) {
+        // Если это отдельное сообщение бота без родителя
+        result.push(message)
+        processed.add(message.id)
+      }
+    })
+    
+    return result
   })
 
   const hasMessages = computed(() => messages.value.length > 0)
@@ -282,6 +325,7 @@ export const useChatStore = defineStore('chat', () => {
         // чтобы не нарушить порядок сортировки
         created_at: currentMessage.created_at,
         isLocal: false,
+        isNew: true, // Помечаем как новое сообщение для анимации
       }
 
       messages.value = [
@@ -322,6 +366,49 @@ export const useChatStore = defineStore('chat', () => {
     }
   }
 
+  /**
+   * Сбросить флаг isNew для сообщения (после завершения анимации)
+   * @param {string|number} messageId - ID сообщения
+   */
+  const markMessageAsAnimated = (messageId) => {
+    const messageIndex = messages.value.findIndex((m) => m.id === messageId)
+    if (messageIndex !== -1) {
+      const currentMessage = messages.value[messageIndex]
+      const updatedMessage = {
+        ...currentMessage,
+        isNew: false,
+      }
+
+      messages.value = [
+        ...messages.value.slice(0, messageIndex),
+        updatedMessage,
+        ...messages.value.slice(messageIndex + 1),
+      ]
+    }
+  }
+
+  /**
+   * Обновить документы в сообщении пользователя
+   * @param {string|number} messageId - ID сообщения
+   * @param {Array} contextDocuments - массив документов
+   */
+  const updateMessageDocuments = (messageId, contextDocuments) => {
+    const messageIndex = messages.value.findIndex((m) => m.id === messageId)
+    if (messageIndex !== -1) {
+      const currentMessage = messages.value[messageIndex]
+      const updatedMessage = {
+        ...currentMessage,
+        context_documents: contextDocuments,
+      }
+
+      messages.value = [
+        ...messages.value.slice(0, messageIndex),
+        updatedMessage,
+        ...messages.value.slice(messageIndex + 1),
+      ]
+    }
+  }
+
   // ============================================================================
   // Return
   // ============================================================================
@@ -356,5 +443,7 @@ export const useChatStore = defineStore('chat', () => {
     updateMessageStatus,
     replaceLoadingMessage,
     replaceLoadingMessageWithError,
+    markMessageAsAnimated,
+    updateMessageDocuments,
   }
 })
