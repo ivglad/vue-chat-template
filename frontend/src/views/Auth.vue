@@ -13,7 +13,7 @@ const { getElementAnimationProps } = usePageTransition({
   enterDelay: 0.2,
 })
 
-// Композабл для обработки ошибок (по аналогии с чатом)
+// Композабл для обработки ошибок
 const { handleAuthError, clearError } = useAuthErrorHandler()
 
 const initialValues = ref({
@@ -183,13 +183,7 @@ defineOptions({
             class="w-fit h-[3.25rem] p-4 rounded-xl text-base"
             type="submit"
             label="Войти в систему"
-            :loading="loginUserIsPending"
             :disabled="loginUserIsPending">
-            <template #loadingicon>
-              <ProgressSpinner
-                style="width: 20px; height: 20px"
-                stroke-width="4" />
-            </template>
           </Button>
         </motion.div>
       </Form>

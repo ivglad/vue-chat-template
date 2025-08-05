@@ -1,23 +1,13 @@
-<script setup>
-defineOptions({
-  name: 'ChatRefactored',
-})
-</script>
+<script setup></script>
 
 <template>
-  <div class="h-screen flex flex-col bg-white">
+  <div class="h-screen flex flex-col">
     <ChatContainer />
   </div>
 </template>
 
 <style scoped>
 @import '@/assets/styles/main.css';
-
-@media (max-width: 768px) {
-  .h-screen {
-    height: 100vh;
-  }
-}
 
 @media (prefers-reduced-motion: reduce) {
   :deep(*) {
