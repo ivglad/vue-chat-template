@@ -38,18 +38,32 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
     margin: 0;
     padding: 0;
-    // color: var(--p-text-color);
+    color: var(--p-text-color);
     word-break: normal;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    // background: var(--p-highlight-background);
+    background: var(--p-highlight-background);
     background-repeat: no-repeat;
     scrollbar-width: thin;
     overflow-x: hidden;
+
+    /* Используем централизованную систему viewport */
+    min-height: var(--viewport-height);
+    position: fixed;
+    width: 100%;
+    height: var(--viewport-height);
+    overflow: hidden;
+  }
+
+  /* Для iOS устройств используем safe area глобально */
+  @supports (-webkit-touch-callout: none) {
+    body {
+      height: var(--viewport-height-safe);
+      min-height: var(--viewport-height-safe);
+    }
   }
 
   picture {
@@ -108,6 +122,15 @@
       &--transform {
         transform: rotate(45deg);
       }
+    }
+  }
+
+  /* Глобальная поддержка prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
   }
 }

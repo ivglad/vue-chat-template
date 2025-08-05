@@ -6,6 +6,17 @@ const isDarkMode = computed(() => {
 })
 provide('isDarkMode', isDarkMode)
 
+// Инициализируем viewport fallback только для старых браузеров
+const { initViewportFallback, cleanupViewportFallback } = useViewportFallback()
+
+onMounted(() => {
+  initViewportFallback()
+})
+
+onUnmounted(() => {
+  cleanupViewportFallback()
+})
+
 // Управление переходами между страницами
 const router = useRouter()
 
@@ -128,8 +139,10 @@ const pageTransition = computed(() => {
   flex-direction: column;
   align-items: center;
   position: relative;
+  width: 100%;
+  height: 100%;
   min-width: 100vw;
-  min-height: 100vh;
+  min-height: var(--viewport-height);
 }
 
 main {

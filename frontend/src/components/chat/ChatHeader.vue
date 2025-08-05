@@ -104,11 +104,11 @@ onClickOutside(headerContainer, () => {
       <AnimatedContainer
         v-if="showUserMenu"
         preset="slideUp"
-        container-class="absolute top-full right-6 z-100">
+        container-class="absolute top-[calc(100%-1rem)] right-6 z-100">
         <Listbox
           :options="userMenuOptions"
           optionLabel="label"
-          class="w-[160px] border-none rounded-2xl"
+          class="w-[10rem] border-none shadow-none rounded-2xl"
           :pt="{
             root: 'bg-white rounded-2xl shadow-lg',
             list: 'p-2 overflow-hidden',

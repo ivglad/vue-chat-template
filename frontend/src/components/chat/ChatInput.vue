@@ -213,7 +213,7 @@ watch(
           multiple
           optionLabel="label"
           listStyle="max-height:200px"
-          class="w-[250px] max-w-[250px] border-none rounded-2xl"
+          class="w-[250px] max-w-[250px] border-none shadow-none rounded-2xl"
           :pt="{
             root: 'bg-white rounded-2xl shadow-lg',
             list: `${
