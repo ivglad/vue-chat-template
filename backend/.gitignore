@@ -1,6 +1,6 @@
-*.log
-.scribe
+# ========== ГЛОБАЛЬНОЕ ========== #
 .DS_Store
+<<<<<<< HEAD:backend/.gitignore
 .env
 .env.backup
 .env.production
@@ -22,11 +22,82 @@
 /storage/*.key
 /storage/pail
 /vendor
+/stubs
 Homestead.json
 Homestead.yaml
 Thumbs.db
 robots.txt
+=======
+Thumbs.db
+*.log
+*.tmp
+*.pid
+*.deb
+.gitkeep
+.env
+!.env.example
+
+# ========== IDE / РЕДАКТОРЫ ========== #
+.idea/
+.vscode/
+.fleet/
+.nova/
+.zed/
+*.sublime-*
+*.code-workspace
+
+# ====== ФРОНТЕНД (Vue 3 + Vite) ====== #
+/frontend/node_modules/
+/frontend/.env
+/frontend/.env.*
+/frontend/.vite/
+/frontend/dist/
+/frontend/.cache/
+/frontend/.temp/
+/frontend/**.local
+
+# Vite-specific
+/frontend/public/build/
+/frontend/public/hot
+/frontend/*.build.js
+/frontend/*.build.css
+
+# Vue-specific
+/frontend/src/.vuepress/
+/frontend/.vue/
+/frontend/.vitepress/
+
+# Тесты / Линтеры
+/frontend/coverage/
+/frontend/.eslintcache
+/frontend/.stylelintcache
+/frontend/junit.xml
+/frontend/__snapshots__/
+
+# PWA (если есть)
+/frontend/.webpack/
+/frontend/sw.*
+/frontend/workbox-*
+
+# ====== БЭКЕНД (Laravel) ====== #
+/backend/vendor/
+/backend/.env
+/backend/.env.*.local
+/backend/storage/*
+!/backend/storage/.gitkeep
+/backend/bootstrap/cache/*
+/backend/public/storage
+/backend/public/vendor
+/backend/.phpunit.*
+/backend/coverage/
+
+# ====== ДЕПЛОЙ / ДОКЕР ====== #
+docker-compose.override.yml
+#.dockerignore
+.env.docker
+deploy.ini
+>>>>>>> origin/dev-docker-clean:.gitignore
 
 # YandexGPT and Document processing
-storage/app/documents/
-storage/logs/yandex-gpt.log
+backend/storage/app/documents/
+backend/storage/logs/*.log

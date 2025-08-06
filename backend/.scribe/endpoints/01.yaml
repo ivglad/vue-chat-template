@@ -1,0 +1,319 @@
+name: Чат
+description: |-
+
+  API для работы с чатом - получение истории, отправка сообщений, очистка истории
+endpoints:
+  -
+    httpMethods:
+      - GET
+    uri: api/v1/chat/history
+    metadata:
+      groupName: Чат
+      groupDescription: |-
+
+        API для работы с чатом - получение истории, отправка сообщений, очистка истории
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Получить историю чата с пагинацией'
+      description: 'Возвращает историю сообщений пользователя с поддержкой пагинации'
+      authenticated: true
+      custom: []
+    headers:
+      Authorization: 'Bearer {ВАШ_ТОКЕН}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters:
+      offset:
+        name: offset
+        description: 'Смещение для пагинации (по умолчанию 0)'
+        required: false
+        example: 0
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      limit:
+        name: limit
+        description: 'Количество сообщений на страницу (по умолчанию 10, максимум 50)'
+        required: false
+        example: 10
+        type: integer
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+    cleanQueryParameters:
+      offset: 0
+      limit: 10
+    bodyParameters:
+      offset:
+        name: offset
+        description: 'Must be at least 0.'
+        required: false
+        example: 27
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+      limit:
+        name: limit
+        description: 'Must be at least 1. Must not be greater than 50.'
+        required: false
+        example: 22
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+      'POST api/v1/chat/send':
+        name: 'POST api/v1/chat/send'
+        description: null
+        required: false
+        example: null
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      offset: 27
+      limit: 22
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "data": {
+              "messages": [
+                {
+                  "id": 1,
+                  "message": "Привет, как дела?",
+                  "type": "user",
+                  "context_documents": null,
+                  "created_at": "2023-12-01T10:00:00.000000Z",
+                  "replies": [
+                    {
+                      "id": 2,
+                      "message": "Привет! Дела отлично, спасибо за вопрос!",
+                      "type": "bot",
+                      "context_documents": ["Документ 1", "Документ 2"],
+                      "created_at": "2023-12-01T10:00:05.000000Z"
+                    }
+                  ]
+                }
+              ],
+              "pagination": {
+                "offset": 0,
+                "limit": 10,
+                "total": 25,
+                "has_more": true
+              }
+            }
+          }
+        headers: []
+        description: ''
+        custom: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - POST
+    uri: api/v1/chat/send
+    metadata:
+      groupName: Чат
+      groupDescription: |-
+
+        API для работы с чатом - получение истории, отправка сообщений, очистка истории
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Отправить сообщение в чат'
+      description: |-
+        Отправляет сообщение в чат и получает ответ от ИИ с использованием контекста документов.
+
+        Поведение параметра document_ids:
+        - Если не указан или пустой массив - поиск происходит по всем доступным пользователю документам
+        - Если указаны конкретные ID - поиск ограничивается только этими документами
+        - Пользователь может указать только те документы, к которым у него есть доступ
+      authenticated: true
+      custom: []
+    headers:
+      Authorization: 'Bearer {ВАШ_ТОКЕН}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      message:
+        name: message
+        description: 'Текст сообщения (максимум 5000 символов)'
+        required: true
+        example: 'Что ты знаешь о Laravel?'
+        type: string
+        enumValues: []
+        exampleWasSpecified: true
+        nullable: false
+        custom: []
+      document_ids:
+        name: document_ids
+        description: 'Массив ID документов для использования в контексте. Если не указан или пустой - поиск по всем доступным документам.'
+        required: false
+        example:
+          - 16
+        type: 'integer[]'
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+      'POST api/v1/chat/send':
+        name: 'POST api/v1/chat/send'
+        description: null
+        required: false
+        example: null
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+    cleanBodyParameters:
+      message: 'Что ты знаешь о Laravel?'
+      document_ids:
+        - 16
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "data": {
+              "user_message": {
+                "id": 10,
+                "message": "Что ты знаешь о Laravel?",
+                "type": "user",
+                "context_documents": null,
+                "created_at": "2023-12-01T12:00:00.000000Z"
+              },
+              "bot_response": {
+                "id": 11,
+                "message": "Laravel - это популярный PHP фреймворк...",
+                "type": "bot",
+                "context_documents": ["Laravel Documentation", "PHP Guide"],
+                "created_at": "2023-12-01T12:00:05.000000Z"
+              }
+            }
+          }
+        headers: []
+        description: 'Успешный ответ с поиском по всем документам'
+        custom: []
+      -
+        status: 403
+        content: |-
+          {
+            "success": false,
+            "message": "Нет доступа к одному или нескольким документам"
+          }
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 422
+        content: |-
+          {
+            "message": "The given data was invalid.",
+            "errors": {
+              "message": ["Поле message обязательно для заполнения."]
+            }
+          }
+        headers: []
+        description: ''
+        custom: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+    custom: []
+  -
+    httpMethods:
+      - DELETE
+    uri: api/v1/chat/clear
+    metadata:
+      groupName: Чат
+      groupDescription: |-
+
+        API для работы с чатом - получение истории, отправка сообщений, очистка истории
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Очистить историю чата пользователя'
+      description: 'Удаляет всю историю сообщений текущего пользователя'
+      authenticated: true
+      custom: []
+    headers:
+      Authorization: 'Bearer {ВАШ_ТОКЕН}'
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      'POST api/v1/chat/send':
+        name: 'POST api/v1/chat/send'
+        description: null
+        required: false
+        example: null
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        custom: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        status: 200
+        content: |-
+          {
+            "success": true,
+            "message": "История чата очищена"
+          }
+        headers: []
+        description: ''
+        custom: []
+      -
+        status: 500
+        content: |-
+          {
+            "success": false,
+            "message": "Не удалось очистить историю чата"
+          }
+        headers: []
+        description: ''
+        custom: []
+    responseFields: []
+    auth:
+      - headers
+      - Authorization
+      - 'Bearer 6g43cv8PD1aE5beadkZfhV6'
+    controller: null
+    method: null
+    route: null
+    custom: []

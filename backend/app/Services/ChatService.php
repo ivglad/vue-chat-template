@@ -11,10 +11,20 @@ use Illuminate\Support\Facades\Log;
 class ChatService
 {
     private YandexGptService $yandexGptService;
+    private GigaChatService $gigaChatService;
+    private OpenRouterService $openRouterService;
+    private SearchService $searchService;
 
-    public function __construct(YandexGptService $yandexGptService)
-    {
+    public function __construct(
+        YandexGptService $yandexGptService, 
+        GigaChatService $gigaChatService, 
+        OpenRouterService $openRouterService,
+        SearchService $searchService
+    ) {
         $this->yandexGptService = $yandexGptService;
+        $this->gigaChatService = $gigaChatService;
+        $this->openRouterService = $openRouterService;
+        $this->searchService = $searchService;
     }
 
     /**
@@ -31,8 +41,8 @@ class ChatService
     public function processMessageWithDocuments(User $user, string $message, array $selectedDocuments = []): ?string
     {
         try {
-            // Валидируем выбранные документы
-            $selectedDocuments = $this->validateSelectedDocuments($user, $selectedDocuments);
+            // Проверяем, есть ли документы в системе
+            $documentsCount = DocumentEmbedding::count();
             
             // Проверяем, есть ли документы в системе
             $documentsCount = DocumentEmbedding::count();
@@ -76,17 +86,13 @@ class ChatService
      */
     private function generateResponseWithContext(User $user, string $message, array $selectedDocuments = []): array
     {
-        // Генерируем эмбеддинг для вопроса
-        $questionEmbedding = $this->yandexGptService->generateEmbeddings($message);
         
-        if (!$questionEmbedding) {
-            Log::error('Failed to generate embeddings for chat message', ['message' => $message]);
-            // Если не удалось создать эмбеддинг, используем простой ответ
-            return [$this->generateSimpleResponse($message), null];
-        }
-
-        // Ищем релевантные документы с учетом выбранных
-        $relevantDocuments = $this->findRelevantDocuments($questionEmbedding, $user, 5, $selectedDocuments);
+        $model = config('app.default_ai_model', env('DEFAULT_AI_MODEL', 'yandex'));
+        
+        $startTime = microtime(true);
+        
+        // Используем унифицированный SearchService для поиска релевантных документов
+        $relevantDocuments = $this->searchService->findRelevantDocuments($user, $message, 5, $selectedDocuments);
         
         if ($relevantDocuments->isEmpty()) {
             // Если релевантных документов не найдено, используем простой ответ
@@ -94,89 +100,31 @@ class ChatService
         }
         
         // Формируем контекст из найденных документов
-        $context = $this->buildContext($relevantDocuments);
+        $context = $this->searchService->buildContext($relevantDocuments);
         
         // Получаем названия документов для сохранения в контексте
-        $contextDocumentTitles = $relevantDocuments->map(function ($embedding) {
-            return $embedding->document->title ?? 'Неизвестный документ';
-        })->unique()->values()->toArray();
+        $contextDocumentTitles = $this->searchService->getDocumentTitles($relevantDocuments);
         
-        // Генерируем ответ с помощью YandexGPT
-        $response = $this->yandexGptService->generateResponse($context, $message);
+        // Логируем качество поиска
+        $executionTime = microtime(true) - $startTime;
+        $this->searchService->logSearchQuality($message, $relevantDocuments, $executionTime);
+
+        $response = "";
+
+        switch (strtolower($model)) {
+            case 'gigachat':
+                $response = $this->gigaChatService->generateResponse($context, $message, $user->id);
+            case 'openrouter':
+                $response = $this->openRouterService->generateResponse($context, $message, $user->id);
+            case 'yandex':
+            default:
+                $response = $this->yandexGptService->generateResponse($context, $message, $user->id);
+        }
         
         return [$response, $contextDocumentTitles];
     }
 
-    /**
-     * Найти релевантные документы на основе эмбеддинга вопроса
-     */
-    private function findRelevantDocuments(array $questionEmbedding, User $user, int $limit = 5, array $selectedDocuments = []): \Illuminate\Support\Collection
-    {
-        // Получаем все эмбеддинги документов, доступных пользователю
-        $query = DocumentEmbedding::with('document')
-            ->whereHas('document', function ($query) use ($user, $selectedDocuments) {
-                $query->where(function ($subQuery) use ($user) {
-                    $subQuery->where('user_id', $user->id)
-                        ->orWhereHas('roles', function ($roleQuery) use ($user) {
-                            $roleQuery->whereIn('roles.id', $user->roles->pluck('id'));
-                        });
-                });
-                
-                // Если указаны конкретные документы, фильтруем по ним
-                if (!empty($selectedDocuments)) {
-                    $query->whereIn('id', $selectedDocuments);
-                }
-            })
-            ->whereNotNull('embedding');
 
-        $embeddings = $query->get();
-
-        if ($embeddings->isEmpty()) {
-            return collect();
-        }
-
-        // Вычисляем сходство и сортируем по релевантности
-        $scored = $embeddings->map(function ($embedding) use ($questionEmbedding) {
-            // Проверяем, что эмбеддинг существует и является массивом
-            if (!$embedding->embedding || !is_array($embedding->embedding)) {
-                return null;
-            }
-
-            $similarity = $this->yandexGptService->cosineSimilarity(
-                $questionEmbedding,
-                $embedding->embedding
-            );
-            
-            return [
-                'embedding' => $embedding,
-                'similarity' => $similarity,
-                'document_id' => $embedding->document_id,
-            ];
-        })->filter(); // Убираем null значения
-
-        // Сортируем по сходству и берем топ-N
-        return $scored
-            ->sortByDesc('similarity')
-            ->take($limit)
-            ->pluck('embedding');
-    }
-
-    /**
-     * Построить контекст из релевантных документов
-     */
-    private function buildContext(\Illuminate\Support\Collection $relevantDocuments): string
-    {
-        $contextParts = [];
-        
-        foreach ($relevantDocuments as $embedding) {
-            $document = $embedding->document;
-            if ($document && $embedding->chunk_text) {
-                $contextParts[] = "Документ \"{$document->title}\":\n{$embedding->chunk_text}";
-            }
-        }
-
-        return implode("\n\n", $contextParts);
-    }
 
     /**
      * Получить историю чата конкретного пользователя
@@ -184,14 +132,6 @@ class ChatService
     public function getUserChatHistory(int $userId, int $limit = 50): \Illuminate\Database\Eloquent\Collection
     {
         return ChatMessage::getUserChatHistory($userId, $limit);
-    }
-
-    /**
-     * Получить историю чата (устарело - оставлено для совместимости)
-     */
-    public function getChatHistory(int $limit = 50): \Illuminate\Database\Eloquent\Collection
-    {
-        return ChatMessage::getChatHistory($limit);
     }
 
     /**

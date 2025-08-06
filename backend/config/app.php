@@ -123,4 +123,31 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | AI Model Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options determine the default AI model and related
+    | settings for document processing and chat functionality.
+    |
+    */
+
+    'default_ai_model' => env('DEFAULT_AI_MODEL', 'yandex'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Document Chunking Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These configuration options determine how documents are split into
+    | chunks for embedding generation and vector search.
+    |
+    */
+
+    'chunking_method' => env('CHUNKING_METHOD', 'adaptive'),
+    'chunk_size' => (int) env('CHUNK_SIZE', 1000),
+    'chunk_overlap' => (int) env('CHUNK_OVERLAP', 200),
+    'chunk_quality_threshold' => (float) env('CHUNK_QUALITY_THRESHOLD', 0.6),
+
 ];

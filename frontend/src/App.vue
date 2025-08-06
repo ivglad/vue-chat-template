@@ -17,9 +17,11 @@ onUnmounted(() => {
   cleanupViewportFallback()
 })
 
+// Используем централизованную систему анимаций
+const { createAnimationProps } = useChatAnimations()
+
 // Управление переходами между страницами
 const router = useRouter()
-
 const transitionType = ref('fade')
 
 // Определяем тип анимации на основе перехода
@@ -33,52 +35,23 @@ router.beforeEach((to, from) => {
   }
 })
 
-// Варианты анимации для motion
-const pageVariants = {
-  // Базовая fade анимация
-  fade: {
-    initial: { opacity: 0, scale: 0.95, filter: 'blur(4px)' },
-    animate: { opacity: 1, scale: 1, filter: 'blur(0px)' },
-    exit: { opacity: 0, scale: 0.95, filter: 'blur(4px)' },
-  },
-  // Появление для перехода auth -> chat
-  'auth-to-chat': {
-    initial: { opacity: 0, scale: 0.9, filter: 'blur(6px)', y: 20 },
-    animate: { opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 },
-    exit: { opacity: 0, scale: 0.9, filter: 'blur(6px)', y: -20 },
-  },
-  // Появление для перехода chat -> auth
-  'chat-to-auth': {
-    initial: { opacity: 0, scale: 0.9, filter: 'blur(6px)', y: 20 },
-    animate: { opacity: 1, scale: 1, filter: 'blur(0px)', y: 0 },
-    exit: { opacity: 0, scale: 0.9, filter: 'blur(6px)', y: -20 },
-  },
-}
-
-// Настройки перехода для разных типов
-const pageTransition = computed(() => {
-  const transitions = {
-    fade: {
-      duration: 0.3,
-      ease: [0.25, 0.46, 0.45, 0.94],
-    },
-    'auth-to-chat': {
-      duration: 0.4,
-      ease: [0.23, 1, 0.32, 1],
-    },
-    'chat-to-auth': {
-      duration: 0.4,
-      ease: [0.23, 1, 0.32, 1],
-    },
+// Получаем анимационные пропсы из централизованной системы
+const pageAnimationProps = computed(() => {
+  const presetMap = {
+    fade: 'pageTransitionFade',
+    'auth-to-chat': 'pageTransitionAuthToChat',
+    'chat-to-auth': 'pageTransitionChatToAuth',
   }
-  return transitions[transitionType.value] || transitions.fade
+  
+  const presetName = presetMap[transitionType.value] || presetMap.fade
+  return createAnimationProps(presetName)
 })
 </script>
 
 <template>
   <Toast>
     <template #closeicon>
-      <!-- <i-custom-close /> -->
+      <i-custom-cross />
     </template>
     <template #container="{ message, closeCallback }">
       <div class="app-toast p-toast-message-content">
@@ -96,7 +69,7 @@ const pageTransition = computed(() => {
             rounded
             @click="closeCallback">
             <template #icon>
-              <!-- <i-custom-plus class="icon-plus--transform" /> -->
+              <!-- <i-custom-cross class="text-color" /> -->
             </template>
           </Button>
         </div>
@@ -114,10 +87,7 @@ const pageTransition = computed(() => {
       <AnimatePresence mode="wait">
         <motion.div
           :key="route.path"
-          :initial="pageVariants[transitionType].initial"
-          :animate="pageVariants[transitionType].animate"
-          :exit="pageVariants[transitionType].exit"
-          :transition="pageTransition"
+          v-bind="pageAnimationProps"
           class="w-full h-full flex-1">
           <component :is="Component" />
         </motion.div>

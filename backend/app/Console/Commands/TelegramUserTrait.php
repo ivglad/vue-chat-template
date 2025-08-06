@@ -73,7 +73,20 @@ trait TelegramUserTrait
         ]);
 
         // Присваиваем роль "пользователь"
-        $user->assignRole('Пользователь');
+        try {
+            $user->assignRole('Пользователь');
+            \Log::info('Роль "Пользователь" успешно назначена пользователю', [
+                'user_id' => $user->id,
+                'telegram_id' => $telegramUser->id,
+                'name' => $name
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Ошибка при назначении роли "Пользователь"', [
+                'user_id' => $user->id,
+                'telegram_id' => $telegramUser->id,
+                'error' => $e->getMessage()
+            ]);
+        }
 
         return $user;
     }

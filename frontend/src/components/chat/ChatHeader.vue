@@ -1,5 +1,4 @@
 <script setup>
-import { onClickOutside } from '@vueuse/core'
 import { AnimatePresence } from 'motion-v'
 
 const userStore = useUserStore()

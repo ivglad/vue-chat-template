@@ -127,6 +127,18 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        'documents' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/documents.log'),
+            'level' => 'debug', 
+            // 'formatter' => Monolog\Formatter\LineFormatter::class,
+            // 'formatter_with' => [
+            //     'format' => "[%datetime%] %channel%.%level_name%: %message% %context% %extra%\n",
+            //     'allowInlineLineBreaks' => true,
+            //     'ignoreEmptyContextAndExtra' => true,
+            // ],
+        ],
+
     ],
 
 ];

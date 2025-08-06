@@ -1,6 +1,5 @@
 <script setup>
 import { motion } from 'motion-v'
-import { useAuthErrorHandler } from '@/composables/auth/useAuthErrorHandler'
 
 const userStore = useUserStore()
 const router = useRouter()

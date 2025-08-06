@@ -1,12 +1,3 @@
-import { computed, watch } from 'vue'
-import { useChatStore } from '@/stores/chat/useChatStore'
-import {
-  useChatHistory,
-  useSendChatMessage,
-  useClearChatHistory,
-} from '@/helpers/api/queries'
-import { useChatErrorHandler } from './useChatErrorHandler'
-
 /**
  * Композабл для управления сообщениями чата
  * Инкапсулирует логику работы с API и состоянием

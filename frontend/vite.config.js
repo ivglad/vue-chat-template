@@ -57,6 +57,18 @@ export default defineConfig({
         'vue',
         'vue-router',
         {
+          '@vueuse/core': [
+            'onClickOutside',
+            'useScroll',
+            'useThrottleFn',
+            'useDebounceFn',
+            'useElementVisibility',
+            'useIntersectionObserver',
+            'useResizeObserver',
+            'useEventListener',
+            'useMouse',
+            'useWindowScroll',
+          ],
           axios: [['default', 'axios']],
         },
         {

@@ -118,7 +118,11 @@ class YandexGptService
             if (empty($context)) {
                 $currentPrompt = $question;
             } else {
-                $currentPrompt = "Контекст: {$context}\n\nВопрос: {$question}\n\nОтветь на вопрос, используя только информацию из контекста. Если в контексте нет информации для ответа, скажи об этом.";
+                $currentPrompt = "Контекст: {$context}\n\nВопрос: {$question}\n\nОтветь на вопрос, используя только информацию из контекста. Если в контексте нет информации для ответа, тогда ответь с юмором.";
+
+                Log::channel("documents")->info("Yandex Context", [
+                    'context' => $context
+                ]);
             }
 
             // Добавляем текущий вопрос к сообщениям
@@ -126,6 +130,10 @@ class YandexGptService
                 'role' => 'user',
                 'text' => $currentPrompt,
             ];
+
+            Log::channel("documents")->info("Yandex Messages", [
+                'messages' => $messages
+            ]);
 
             $response = $this->client->post($this->baseUrl . '/foundationModels/v1/completion', [
                 'headers' => [

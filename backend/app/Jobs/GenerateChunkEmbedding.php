@@ -57,9 +57,9 @@ class GenerateChunkEmbedding implements ShouldQueue
         // Получаем количество обработанных чанков
         $processedChunks = DocumentEmbedding::where('document_id', $this->documentId)->count();
         
-        // Получаем ожидаемое количество чанков из содержимого документа
+        // Получаем ожидаемое количество чанков с использованием того же метода, что и при генерации
         $documentService = app(\App\Services\DocumentService::class);
-        $expectedChunks = count($documentService->splitTextIntoChunks($document->content));
+        $expectedChunks = $this->getExpectedChunksCount($documentService, $document->content);
         
         // Если все чанки обработаны, помечаем как завершенный
         if ($processedChunks >= $expectedChunks) {
@@ -67,6 +67,22 @@ class GenerateChunkEmbedding implements ShouldQueue
                 'processing_status' => 'completed',
                 'embeddings_generated' => true
             ]);
+        }
+    }
+
+    /**
+     * Получение ожидаемого количества чанков с использованием того же метода, что и при генерации
+     */
+    private function getExpectedChunksCount(\App\Services\DocumentService $documentService, string $content): int
+    {
+        try {
+            // Используем публичный метод DocumentService для получения чанков
+            $chunks = $documentService->getChunksByMethod($content);
+            return count($chunks);
+        } catch (\Exception $e) {
+            Log::error("Error calculating expected chunks count: " . $e->getMessage());
+            // Fallback к оригинальному методу
+            return count($documentService->splitTextIntoChunks($content));
         }
     }
 }

@@ -265,7 +265,7 @@ class TelegramBotSettings extends Page implements HasForms
             try {
                 $basePath = base_path();
                 $phpPath = PHP_BINARY;
-                $command = "cd {$basePath} && nohup {$phpPath} artisan telegram:poll --daemon > storage/logs/telegram_bot.log 2>&1 & echo $!";
+                $command = "cd {$basePath} && nohup php artisan telegram:poll --daemon > storage/logs/telegram_bot.log 2>&1 & echo $!";
                 
                 Log::info('TelegramBotSettings: Выполняем команду запуска', ['command' => $command]);
                 

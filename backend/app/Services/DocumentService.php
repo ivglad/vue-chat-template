@@ -13,10 +13,20 @@ use App\Jobs\GenerateChunkEmbedding;
 class DocumentService
 {
     private YandexGptService $yandexGptService;
+    private GigaChatService $gigaChatService;
+    private OpenRouterService $openRouterService;
+    private SearchService $searchService;
 
-    public function __construct(YandexGptService $yandexGptService)
-    {
+    public function __construct(
+        YandexGptService $yandexGptService, 
+        GigaChatService $gigaChatService, 
+        OpenRouterService $openRouterService,
+        SearchService $searchService
+    ) {
         $this->yandexGptService = $yandexGptService;
+        $this->gigaChatService = $gigaChatService;
+        $this->openRouterService = $openRouterService;
+        $this->searchService = $searchService;
     }
 
     /**
@@ -193,7 +203,7 @@ class DocumentService
     }
 
     /**
-     * Генерация эмбеддингов для документа
+     * Генерация эмбеддингов для документа с улучшенным разделением на чанки
      */
     public function generateEmbeddingsForDocument(Document $document): bool
     {
@@ -202,12 +212,6 @@ class DocumentService
             $document->embeddings()->delete();
 
             $content = $document->content;
-            if (!$content && $document->file_path) {
-                $content = $this->extractTextFromFile($document->file_path);
-                if ($content) {
-                    $document->update(['content' => $content]);
-                }
-            }
 
             if (!$content) {
                 Log::warning("No content found for document {$document->id}");
@@ -221,8 +225,11 @@ class DocumentService
                 'embeddings_generated' => false
             ]);
 
-            // Разбиваем на чанки
-            $chunks = $this->splitTextIntoChunks($content);
+            // Используем улучшенное разделение на чанки
+            $chunks = $this->getImprovedChunks($content);
+
+            // Логируем информацию о качестве разделения
+            $this->logChunkingQuality($document->id, $chunks);
 
             foreach ($chunks as $index => $chunk) {
                 GenerateChunkEmbedding::dispatch($document->id, $index, $chunk)
@@ -238,62 +245,147 @@ class DocumentService
     }
 
     /**
-     * Поиск релевантных чанков для вопроса с использованием pgvector
+     * Получение улучшенных чанков с выбором оптимального метода
      */
-    public function findRelevantChunks(array $documentIds, string $question, int $limit = 5): array
+    private function getImprovedChunks(string $content): array
     {
-        $questionEmbedding = $this->yandexGptService->generateEmbeddings($question);
+        return $this->getChunksByMethod($content);
+    }
+
+    /**
+     * Публичный метод для получения чанков по выбранному методу
+     * Используется как в DocumentService, так и в GenerateChunkEmbedding
+     */
+    public function getChunksByMethod(string $content, ?string $method = null): array
+    {
+        $chunkingMethod = $method ?? config('app.chunking_method', env('CHUNKING_METHOD', 'adaptive'));
         
-        if (!$questionEmbedding) {
-            return [];
+        try {
+            switch ($chunkingMethod) {
+                // case 'adaptive':
+                //     $qualityService = new \App\Services\ChunkQualityService();
+                //     $adaptiveService = new \App\Services\AdaptiveChunkingService($qualityService);
+                //     return $adaptiveService->adaptiveChunking($content, [
+                //         'target_chunk_size' => (int)config('app.chunk_size', env('CHUNK_SIZE', 1000)),
+                //         'quality_threshold' => (float)config('app.chunk_quality_threshold', env('CHUNK_QUALITY_THRESHOLD', 0.6))
+                //     ]);
+                    
+                // case 'improved':
+                //     $improvedService = new \App\Services\ImprovedDocumentService(
+                //         $this->yandexGptService,
+                //         $this->gigaChatService,
+                //         $this->openRouterService
+                //     );
+                //     return $improvedService->splitTextIntoChunks(
+                //         $content,
+                //         (int)config('app.chunk_size', env('CHUNK_SIZE', 1000)),
+                //         (int)config('app.chunk_overlap', env('CHUNK_OVERLAP', 200))
+                //     );
+                    
+                // case 'semantic':
+                //     $improvedService = new \App\Services\ImprovedDocumentService(
+                //         $this->yandexGptService,
+                //         $this->gigaChatService,
+                //         $this->openRouterService
+                //     );
+                //     return $improvedService->semanticSplitTextIntoChunks(
+                //         $content,
+                //         (int)config('app.chunk_size', env('CHUNK_SIZE', 1000)),
+                //         (int)config('app.chunk_overlap', env('CHUNK_OVERLAP', 200))
+                //     );
+                    
+                default:
+                    // Используем оригинальный метод как fallback
+                    return $this->splitTextIntoChunks(
+                        $content,
+                        (int)config('app.chunk_size', env('CHUNK_SIZE', 1000)),
+                        (int)config('app.chunk_overlap', env('CHUNK_OVERLAP', 200))
+                    );
+            }
+        } catch (\Exception $e) {
+            Log::error("Error in getChunksByMethod with method '{$chunkingMethod}': " . $e->getMessage());
+            // Fallback к оригинальному методу
+            return $this->splitTextIntoChunks($content);
         }
+    }
 
-        $questionVector = new Vector($questionEmbedding);
-
-        // Используем pgvector для быстрого поиска ближайших соседей
-        $nearestChunks = DocumentEmbedding::query()
-            ->whereIn('document_id', $documentIds)
-            ->whereNotNull('embedding_vector')
-            ->nearestNeighbors('embedding_vector', $questionVector, Distance::Cosine)
-            ->take($limit)
-            ->get();
-
-        $results = [];
-        foreach ($nearestChunks as $chunk) {
-            $results[] = [
-                'chunk' => $chunk->chunk_text,
-                'similarity' => 1 - $chunk->neighbor_distance, // Переводим cosine distance в similarity
-                'document_id' => $chunk->document_id,
-            ];
+    /**
+     * Логирование информации о качестве разделения
+     */
+    private function logChunkingQuality(int $documentId, array $chunks): void
+    {
+        $qualityService = new \App\Services\ChunkQualityService();
+        $totalQuality = 0;
+        $lowQualityCount = 0;
+        
+        foreach ($chunks as $chunk) {
+            $quality = $qualityService->evaluateChunkQuality($chunk);
+            $overallScore = ($quality['completeness_score'] + $quality['semantic_coherence'] + 
+                           $quality['information_density'] + $quality['boundary_quality']) / 4;
+            $totalQuality += $overallScore;
+            
+            if ($overallScore < 0.5) {
+                $lowQualityCount++;
+            }
         }
+        
+        $averageQuality = count($chunks) > 0 ? $totalQuality / count($chunks) : 0;
+        
+        Log::info("Document {$documentId} chunking quality", [
+            'total_chunks' => count($chunks),
+            'average_quality' => round($averageQuality, 3),
+            'low_quality_chunks' => $lowQualityCount,
+            'average_length' => count($chunks) > 0 ? array_sum(array_map('mb_strlen', $chunks)) / count($chunks) : 0
+        ]);
+    }
 
-        return $results;
+    /**
+     * Получить список доступных моделей
+     */
+    public function getAvailableModels(): array
+    {
+        return [
+            'yandex' => 'Yandex GPT',
+            'gigachat' => 'GigaChat',
+            'openrouter' => 'OpenRouter'
+        ];
     }
 
     /**
      * Ответ на вопрос по документам пользователя
      */
-    public function answerQuestion(int $userId, string $question): ?string
+    public function answerQuestion(int $userId, string $question, ?string $model = null): ?string
     {
-        // Получаем документы пользователя
-        $documents = Document::where('user_id', $userId)
-            ->where('embeddings_generated', true)
-            ->get();
-
-        if ($documents->isEmpty()) {
-            return "У вас нет загруженных документов с обработанными эмбеддингами.";
+        // Если модель не указана, используем настройку по умолчанию из .env
+        if ($model === null) {
+            $model = config('app.default_ai_model', env('DEFAULT_AI_MODEL', 'yandex'));
         }
 
-        $documentIds = $documents->pluck('id')->toArray();
-        $relevantChunks = $this->findRelevantChunks($documentIds, $question);
+        // Получаем пользователя
+        $user = \App\Models\User::find($userId);
+        if (!$user) {
+            return "Пользователь не найден.";
+        }
 
-        if (empty($relevantChunks)) {
+        // Используем унифицированный SearchService для поиска релевантных документов
+        $relevantDocuments = $this->searchService->findRelevantDocuments($user, $question, 5);
+
+        if ($relevantDocuments->isEmpty()) {
             return "Не удалось найти релевантную информацию в ваших документах.";
         }
 
-        // Формируем контекст из найденных чанков
-        $context = implode("\n\n", array_map(fn($chunk) => $chunk['chunk'], $relevantChunks));
+        // Формируем контекст из найденных документов
+        $context = $this->searchService->buildContext($relevantDocuments);
 
-        return $this->yandexGptService->generateResponse($context, $question);
+        // Выбираем сервис в зависимости от модели
+        switch (strtolower($model)) {
+            case 'gigachat':
+                return $this->gigaChatService->generateResponse($context, $question, $userId);
+            case 'openrouter':
+                return $this->openRouterService->generateResponse($context, $question, $userId);
+            case 'yandex':
+            default:
+                return $this->yandexGptService->generateResponse($context, $question, $userId);
+        }
     }
 } 

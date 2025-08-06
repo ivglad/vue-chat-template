@@ -1,5 +1,4 @@
 <script setup>
-import { onClickOutside } from '@vueuse/core'
 import { AnimatePresence } from 'motion-v'
 
 const emit = defineEmits(['send-message'])
@@ -18,7 +17,7 @@ const messageText = ref('')
 const selectedDocuments = ref([])
 const showDocumentsMenu = ref(false)
 
-const { data: documentsData, isLoading: documentsLoading } = useDocuments({
+const { data: documentsData } = useDocuments({
   per_page: 100,
 })
 
