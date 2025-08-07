@@ -76,7 +76,7 @@ onUnmounted(() => {
             :message-id="message.id" />
         </div>
       </div>
-      <div class="assistant-title flex flex-wrap items-center space-y-2.5">
+      <div class="assistant-title flex flex-wrap items-center gap-2.5">
         <i-custom-robot-original class="w-[40px] h-[40px] flex-shrink-0" />
         <span class="italic" :class="loadingTextClass">
           {{

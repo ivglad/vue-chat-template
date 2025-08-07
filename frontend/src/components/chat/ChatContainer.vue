@@ -17,7 +17,12 @@ const handleSendMessage = async (messageData) => {
   <div class="h-full flex flex-col items-center relative bg-[#EDEFF6]">
     <ChatHeader />
 
-    <ChatMessagesList
+    <!-- <ChatMessagesList
+      ref="messagesListRef"
+      :messages="messages"
+      :is-loading="isLoading"
+      :has-messages="hasMessages" /> -->
+    <ChatMessagesListOptimized
       ref="messagesListRef"
       :messages="messages"
       :is-loading="isLoading"

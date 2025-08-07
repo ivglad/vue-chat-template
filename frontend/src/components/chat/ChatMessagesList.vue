@@ -1,5 +1,7 @@
 <script setup>
 import { AnimatePresence, motion } from 'motion-v'
+import { useChatScroll } from '@/composables/chat/useChatScroll'
+import { useElementVisibility } from '@vueuse/core'
 
 const props = defineProps({
   messages: {
@@ -10,7 +12,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-
   hasMessages: {
     type: Boolean,
     default: false,
@@ -33,6 +34,9 @@ const stateAnimationProps = createAnimationProps('chatStateTransition')
 const messagesContainer = ref(null)
 const messagesChildContainer = ref(null)
 
+// Отслеживаем видимость контейнера сообщений для определения готовности к прокрутке
+const messagesChildContainerVisible = useElementVisibility(messagesChildContainer)
+
 const overflowClasses = computed(() => {
   if (!messagesContainer.value || !messagesChildContainer.value) return ''
   const containerHeight = messagesContainer.value.clientHeight
@@ -41,6 +45,55 @@ const overflowClasses = computed(() => {
     messagesChildContainer.value.offsetHeight
   return childHeight > containerHeight ? 'pr-1' : ''
 })
+
+// Инициализируем композабл для плавной прокрутки чата
+const { scrollToBottom } = useChatScroll(messagesContainer)
+
+// Флаг для отслеживания первоначальной прокрутки
+const hasPerformedInitialScroll = ref(false)
+
+// Реактивно отслеживаем готовность к прокрутке
+const isReadyForScroll = computed(() => {
+  return (
+    currentState.value === 'messages' &&
+    messagesChildContainerVisible.value &&
+    messagesChildContainer.value &&
+    messagesContainer.value
+  )
+})
+
+// Функция для выполнения первоначальной прокрутки
+const performInitialScroll = () => {
+  if (!hasPerformedInitialScroll.value && isReadyForScroll.value) {
+    scrollToBottom()
+    hasPerformedInitialScroll.value = true
+  }
+}
+
+// Отслеживаем готовность к прокрутке и выполняем её при необходимости
+watchEffect(() => {
+  if (isReadyForScroll.value) {
+    // Используем nextTick для гарантии, что DOM обновлен
+    nextTick(performInitialScroll)
+  }
+})
+
+// Обработчик завершения анимации появления сообщений
+const onMessagesAnimationComplete = () => {
+  // Дополнительная проверка и прокрутка после завершения анимации
+  nextTick(performInitialScroll)
+}
+
+// Сбрасываем флаг при изменении списка сообщений (для новых загрузок)
+watch(
+  () => props.messages.length,
+  (newLength, oldLength) => {
+    // Сбрасываем флаг только если сообщения были очищены (новая загрузка)
+    if (newLength === 0 || (oldLength > 0 && newLength < oldLength)) {
+      hasPerformedInitialScroll.value = false
+    }
+  }
+)
 </script>
 
 <template>
@@ -70,7 +123,8 @@ const overflowClasses = computed(() => {
         v-else-if="currentState === 'messages'"
         key="messages"
         v-bind="stateAnimationProps"
-        class="w-full self-start">
+        class="w-full self-start"
+        @complete="onMessagesAnimationComplete">
         <div ref="messagesChildContainer">
           <ChatMessage
             v-for="(message, index) in messages"
