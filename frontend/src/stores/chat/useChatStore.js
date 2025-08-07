@@ -65,13 +65,8 @@ export const useChatStore = defineStore('chat', () => {
             processed.add(botReply.id)
           }
         }
-      } else if (message.type === 'bot' && !processed.has(message.id)) {
-        // Если это отдельное сообщение бота без родителя
-        result.push(message)
-        processed.add(message.id)
       }
     })
-    
     return result
   })
 
