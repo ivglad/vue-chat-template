@@ -81,7 +81,7 @@ onUnmounted(() => {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   color: transparent;
-  animation: gradient-flow 1s ease-in-out infinite;
+  animation: gradient-flow 1.2s ease-in-out infinite;
 }
 
 @keyframes gradient-flow {

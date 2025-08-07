@@ -62,7 +62,7 @@ export function useSearchPhrases() {
     pause: pauseInterval,
     resume: resumeInterval,
     isActive,
-  } = useIntervalFn(nextPhrase, 800, { immediate: false })
+  } = useIntervalFn(nextPhrase, 1200, { immediate: false })
 
   // Вычисляемое свойство для текущей фразы на основе состояния
   const currentPhrase = computed(() => {

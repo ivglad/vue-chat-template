@@ -25,6 +25,7 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
       scrollToBottom: () => {},
       isScrolledToBottom: computed(() => false),
       canScrollToBottom: computed(() => false),
+      checkScrollNeeded: () => computed(() => false),
     }
   }
 
@@ -49,15 +50,11 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
   useResizeObserver(scrollContainer, () => {
     // Блокируем автоматическую прокрутку во время умной прокрутки
     if (isSmartScrollActive.value) {
-      console.log(
-        '🚫 ResizeObserver (composable): Blocked by smart scroll flag',
-      )
       return
     }
 
     // Автоматически прокручиваем вниз при изменении размера, если уже были внизу
     if (arrivedState.bottom) {
-      console.log('📏 ResizeObserver (composable): Scrolling to bottom')
       nextTick(() => scrollToBottom())
     }
   })
@@ -136,13 +133,6 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
     // Простой поиск по data-separator-id
     const element = scrollContainer.value.querySelector(
       `[data-separator-id="${messageId}"]`,
-    )
-
-    console.log(
-      '🔍 Looking for separator with messageId:',
-      messageId,
-      'found:',
-      !!element,
     )
 
     return element
@@ -228,23 +218,15 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
    * Прокрутить разделитель к верхней границе экрана
    */
   const scrollSeparatorToTop = (messageId) => {
-    console.log('🔍 Searching for separator with messageId:', messageId)
-
     nextTick(() => {
       const separatorElement = findMessageSeparator(messageId)
 
       if (!separatorElement) {
-        console.error('❌ Separator NOT FOUND for messageId:', messageId)
         return
       }
 
-      console.log('✅ Separator FOUND:', separatorElement)
-
       const targetY = calculateScrollToTop(separatorElement)
-      console.log('📐 Calculated scroll position:', targetY)
-
       performScroll(targetY)
-      console.log('🎯 Scroll executed to position:', targetY)
     })
   }
 
@@ -313,14 +295,8 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
       const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
 
       if (repliedMessage) {
-        console.log(
-          '🎯 Smart scroll: INSTANT blocking for message',
-          repliedMessage.id,
-        )
-
         // МГНОВЕННО активируем флаг блокировки
         isSmartScrollActive.value = true
-        console.log('🚫 Smart scroll: Blocking automatic scroll (INSTANT)')
       }
     }
 
@@ -329,11 +305,6 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
       const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
 
       if (repliedMessage) {
-        console.log(
-          '🎯 Smart scroll: Executing scroll for bot message',
-          repliedMessage.id,
-        )
-
         // Находим пользовательское сообщение, которое предшествует ответу бота
         // assistant-title находится МЕЖДУ пользовательским сообщением и ответом бота
         const userMessage = newMessages
@@ -343,20 +314,13 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
         if (userMessage) {
           // Ждем следующего тика, чтобы DOM успел обновиться
           nextTick(() => {
-            console.log('🔍 Found corresponding user message:', userMessage.id)
             scrollSeparatorToTop(userMessage.id)
           })
-        } else {
-          console.error(
-            '❌ No user message found for bot reply:',
-            repliedMessage.id,
-          )
         }
 
         // Сбрасываем флаг через время анимации + буфер
         setTimeout(() => {
           isSmartScrollActive.value = false
-          console.log('✅ Smart scroll: Unblocking automatic scroll')
         }, 1000) // 600ms анимация + 400ms буфер
       }
     }, 50)
@@ -409,7 +373,25 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
     })
   }
 
-  // Композабл больше не использует кэширование DOM элементов
+  // ============================================================================
+  // Child Container Comparison
+  // ============================================================================
+
+  /**
+   * Создает computed для проверки необходимости прокрутки
+   * @param {Ref} childContainer - ссылка на дочерний контейнер
+   * @returns {ComputedRef<boolean>} true если контент больше контейнера и нужна прокрутка
+   */
+  const checkScrollNeeded = (childContainer) => {
+    return computed(() => {
+      if (!scrollContainer.value || !childContainer.value) return false
+      
+      const parentHeight = scrollContainer.value.clientHeight
+      const childHeight = childContainer.value.scrollHeight
+      
+      return childHeight > parentHeight
+    })
+  }
 
   return {
     // Основные функции
@@ -421,6 +403,9 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
     enableSmartScroll,
     scrollSeparatorToBottom,
     scrollSeparatorToTop,
+
+    // Функция для проверки необходимости прокрутки
+    checkScrollNeeded,
 
     // Состояние прокрутки
     scrollY: readonly(scrollY),

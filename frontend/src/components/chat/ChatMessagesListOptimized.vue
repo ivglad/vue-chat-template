@@ -1,6 +1,5 @@
 <script setup>
 import { AnimatePresence, motion } from 'motion-v'
-import { useChatScrollOptimized } from '@/composables/chat/useChatScrollOptimized'
 import { useResizeObserver, toRef } from '@vueuse/core'
 
 const props = defineProps({
@@ -38,27 +37,28 @@ const messagesChildContainer = ref(null)
 const {
   scrollToBottom,
   isScrolledToBottom,
-  canScrollToBottom,
-  containerVisible,
   enableSmartScroll,
   isSmartScrollActive,
+  checkScrollNeeded,
 } = useChatScrollOptimized(messagesContainer, {
   behavior: 'smooth',
   threshold: 0.1,
 })
 
-// Отслеживаем изменения размера контейнера сообщений
-useResizeObserver(messagesChildContainer, () => {
-  // Блокируем автоматическую прокрутку во время умной прокрутки
-  if (isSmartScrollActive.value) {
-    console.log('🚫 ResizeObserver (component): Blocked by smart scroll flag')
-    return
-  }
+// Проверяем необходимость прокрутки
+const needsScroll = checkScrollNeeded(messagesChildContainer)
 
-  // Прокручиваем вниз при изменении размера контента, если были внизу
-  if (isScrolledToBottom.value) {
-    console.log('📏 ResizeObserver (component): Scrolling to bottom')
-    nextTick(scrollToBottom)
+// Отслеживаем изменения размера дочернего контейнера
+useResizeObserver(messagesChildContainer, (entries) => {
+  if (entries[0]) {
+    // Блокируем автоматическую прокрутку во время умной прокрутки
+    if (isSmartScrollActive.value) {
+      return
+    }
+    // Прокручиваем вниз при изменении размера контента, если были внизу
+    if (isScrolledToBottom.value) {
+      nextTick(scrollToBottom)
+    }
   }
 })
 
@@ -72,7 +72,6 @@ const getBotResponseForUser = (userMessage, userIndex) => {
   if (nextBotMessage) {
     return nextBotMessage
   }
-
   // Если нет ответа бота, создаем объект с состоянием загрузки
   return {
     isLoading: true,
@@ -91,7 +90,7 @@ onMounted(() => {
   <div
     ref="messagesContainer"
     class="flex flex-1 items-center justify-center w-full overflow-y-auto px-6 py-4 pb-0 space-y-4 scroll-smooth"
-    :class="{ 'pr-1': canScrollToBottom }">
+    :class="{ 'pr-1': needsScroll }">
     <AnimatePresence mode="wait">
       <motion.div
         v-if="currentState === 'loading'"
