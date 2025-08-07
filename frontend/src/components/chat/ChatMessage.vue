@@ -1,5 +1,4 @@
 <script setup>
-
 const props = defineProps({
   message: {
     type: Object,
@@ -60,9 +59,11 @@ onUnmounted(() => {
 
 <template>
   <div class="w-full">
-    <div v-if="message.type === 'user'" class="flex justify-end">
+    <div
+      v-if="message.type === 'user'"
+      class="flex flex-col justify-end space-y-8">
       <div
-        class="flex flex-col gap-2.5 max-w-[300px] p-4 bg-white rounded-2xl">
+        class="flex flex-col self-end space-y-2.5 max-w-[300px] p-4 bg-white rounded-2xl">
         <ChatMessageDocuments
           v-if="message.context_documents?.length"
           :documents="message.context_documents" />
@@ -75,10 +76,7 @@ onUnmounted(() => {
             :message-id="message.id" />
         </div>
       </div>
-    </div>
-
-    <div v-else>
-      <div class="assistant-title flex items-center gap-2.5">
+      <div class="assistant-title flex flex-wrap items-center space-y-2.5">
         <i-custom-robot-original class="w-[40px] h-[40px] flex-shrink-0" />
         <span class="italic" :class="loadingTextClass">
           {{
@@ -89,19 +87,17 @@ onUnmounted(() => {
               : 'Вот что я нашёл по этому вопросу'
           }}
         </span>
+        <Divider class="assistant-divider-start w-full bg-surface-400 mt-0" />
       </div>
-      <Divider
-        v-if="!isLoadingMessage && message.status !== 'error'"
-        class="assistant-divider-start bg-surface-400" />
-      <div class="flex-1">
-        <ChatMessageContent
-          v-if="!isLoadingMessage && message.status !== 'error'"
-          :content="message.message"
-          :type="message.type"
-          :is-local="message.isLocal"
-          :is-new="message.isNew"
-          :message-id="message.id" />
-      </div>
+    </div>
+    <div v-else-if="!isLoadingMessage && message.status !== 'error'">
+      <ChatMessageContent
+        :content="message.message"
+        :type="message.type"
+        :is-local="message.isLocal"
+        :is-new="message.isNew"
+        :message-id="message.id" />
+      <Divider class="assistant-divider-end bg-surface-400" />
     </div>
   </div>
 </template>

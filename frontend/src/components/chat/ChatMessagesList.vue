@@ -71,15 +71,14 @@ const overflowClasses = computed(() => {
         key="messages"
         v-bind="stateAnimationProps"
         class="w-full self-start">
-        <div
-          ref="messagesChildContainer"
-          class="space-y-8">
+        <div ref="messagesChildContainer">
           <ChatMessage
             v-for="(message, index) in messages"
             :key="message.id"
             :message="message"
             :index="index"
-            class="max-w-[70rem] justify-self-center" />
+            class="max-w-[70rem] justify-self-center"
+            :class="{ 'mb-8 last:mb-4': message.type !== 'user' }" />
         </div>
       </motion.div>
     </AnimatePresence>

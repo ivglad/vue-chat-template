@@ -107,15 +107,6 @@ const handleSendMessage = () => {
     const lastDocuments = findLastUsedDocuments()
     if (lastDocuments.length > 0) {
       selectedDocuments.value = lastDocuments
-
-      // Показываем уведомление о автоматическом прикреплении
-      nextTick(() => {
-        console.log(
-          `Автоматически прикреплены документы: ${lastDocuments
-            .map((d) => d.title)
-            .join(', ')}`,
-        )
-      })
     }
   }
 
