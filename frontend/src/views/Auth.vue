@@ -66,7 +66,6 @@ const loginSubmit = async (e) => {
         e.states.password.valid = false
         e.states.password.invalid = true
 
-        // Показываем toast уведомление
         toast.add({
           severity: 'error',
           summary: 'Ошибка авторизации',
@@ -76,25 +75,12 @@ const loginSubmit = async (e) => {
       },
       onSuccess: (data) => {
         const { user, token } = data.data.data
-
         // Объединяем данные пользователя с токеном
         const userData = {
           ...user,
           accessToken: token,
         }
-
-        // Инициализируем пользователя в store
         userStore.initUser(userData)
-
-        // Показываем успешное уведомление
-        toast.add({
-          severity: 'success',
-          summary: 'Успешно',
-          detail: 'Добро пожаловать!',
-          life: 3000,
-        })
-
-        // Перенаправляем на страницу чата
         router.push('/chat')
       },
     },
