@@ -1,105 +1,145 @@
-import { watch, nextTick, onUnmounted, ref } from 'vue'
 import {
+  useElementVisibility,
   useScroll,
-  useWindowSize,
+  useResizeObserver,
+  watchArray,
+  watchDeep,
   useDebounceFn,
-  useTransition,
+  useWindowSize,
 } from '@vueuse/core'
-import { useChatStore } from '@/stores/chat/useChatStore'
 
 /**
- * Композабл для управления плавной прокруткой чата
- * Обеспечивает автоматическую прокрутку в два этапа:
- * 1. После создания локального сообщения пользователя - к нижней границе экрана
- * 2. После получения ответа сервера - к верхней границе экрана
- * 3. Предоставляет простую функцию прокрутки к низу для внешнего управления
+ * Оптимизированный композабл для управления прокруткой чата
+ * Использует VueUse для реактивного отслеживания состояния без таймаутов
  *
  * @param {Ref<HTMLElement>} scrollContainer - ref контейнера для скролла
+ * @param {Object} options - опции конфигурации
  * @returns {Object} API композабла с методами прокрутки
  */
-export function useChatScroll(scrollContainer) {
-  // Проверяем доступность контейнера
+export function useChatScroll(scrollContainer, options = {}) {
+  const { behavior = 'smooth', threshold = 0.1, rootMargin = '0px' } = options
+
   if (!scrollContainer) {
     console.warn('useChatScroll: scrollContainer ref is required')
-    return
+    return {
+      scrollToBottom: () => {},
+      isScrolledToBottom: computed(() => false),
+      canScrollToBottom: computed(() => false),
+      checkScrollNeeded: () => computed(() => false),
+    }
   }
 
-  const chatStore = useChatStore()
+  // Используем VueUse для отслеживания прокрутки
+  const {
+    y: scrollY,
+    arrivedState,
+    isScrolling,
+    directions,
+  } = useScroll(scrollContainer, { behavior })
+
+  // Отслеживаем видимость контейнера
+  const containerVisible = useElementVisibility(scrollContainer, {
+    threshold,
+    rootMargin,
+  })
+
+  // Флаг для блокировки автоматической прокрутки во время умной прокрутки
+  const isSmartScrollActive = ref(false)
+
+  // Отслеживаем изменения размера контейнера
+  useResizeObserver(scrollContainer, () => {
+    // Блокируем автоматическую прокрутку во время умной прокрутки
+    if (isSmartScrollActive.value) {
+      return
+    }
+
+    // Автоматически прокручиваем вниз при изменении размера, если уже были внизу
+    if (arrivedState.bottom) {
+      nextTick(() => scrollToBottom())
+    }
+  })
+
+  // Вычисляем, находимся ли мы внизу
+  const isScrolledToBottom = computed(() => arrivedState.bottom)
+
+  // Вычисляем, можем ли мы прокрутить вниз
+  const canScrollToBottom = computed(() => {
+    if (!scrollContainer.value) return false
+    const { scrollHeight, clientHeight } = scrollContainer.value
+    return scrollHeight > clientHeight
+  })
+
+  // Функция для плавной прокрутки вниз
+  const scrollToBottom = () => {
+    if (!scrollContainer.value || !containerVisible.value) return
+
+    const element = scrollContainer.value
+    const targetScrollTop = element.scrollHeight - element.clientHeight
+
+    if (behavior === 'smooth') {
+      element.scrollTo({
+        top: targetScrollTop,
+        behavior: 'smooth',
+      })
+    } else {
+      element.scrollTop = targetScrollTop
+    }
+  }
+
+  // Функция для прокрутки к определенному элементу
+  const scrollToElement = (elementOrSelector, options = {}) => {
+    if (!scrollContainer.value || !containerVisible.value) return
+
+    let targetElement
+    if (typeof elementOrSelector === 'string') {
+      targetElement = scrollContainer.value.querySelector(elementOrSelector)
+    } else {
+      targetElement = elementOrSelector
+    }
+
+    if (!targetElement) return
+
+    const {
+      block = 'start',
+      inline = 'nearest',
+      behavior: scrollBehavior = behavior,
+    } = options
+
+    targetElement.scrollIntoView({
+      behavior: scrollBehavior,
+      block,
+      inline,
+    })
+  }
 
   // Отслеживаем размеры окна для адаптивности
   const { width: windowWidth } = useWindowSize()
 
-  // Используем VueUse для управления скроллом
-  const { isScrolling } = useScroll(scrollContainer, {
-    behavior: 'smooth',
-  })
-
-  // Создаем плавную анимацию для прокрутки с easing
-  const scrollPosition = ref(0)
-  const animatedScrollPosition = useTransition(scrollPosition, {
-    duration: 600, // Уменьшаем длительность для более отзывчивой анимации
-    transition: [0.2, 0.0, 0.4, 1.0], // Cubic bezier для быстрого старта и плавного конца (ease-out)
-  })
-
-  // Кэш для элементов DOM для оптимизации производительности
-  const elementCache = new Map()
-
-  // Флаг для предотвращения множественных одновременных прокруток
-  const isScrollInProgress = ref(false)
-
-
-
-  /**
-   * Проверить поддержку плавной прокрутки браузером
-   * @returns {boolean} - поддерживается ли smooth scrolling
-   */
-  const isSmoothScrollSupported = () => {
-    return 'scrollBehavior' in document.documentElement.style
-  }
+  // Упрощенная логика поиска разделителей без кэширования
 
   /**
    * Определить, является ли устройство мобильным
-   * @returns {boolean} - мобильное устройство или нет
    */
   const isMobileDevice = () => {
     return windowWidth.value < 768 // Tailwind md breakpoint
   }
 
   /**
-   * Найти элемент assistant-divider-start по ID сообщения с кэшированием
-   * @param {string} messageId - ID сообщения
-   * @returns {HTMLElement|null} - найденный элемент или null
+   * Найти разделитель по ID сообщения (упрощенная версия)
    */
-  const findAssistantDivider = (messageId) => {
-    if (!messageId) return null
+  const findMessageSeparator = (messageId) => {
+    if (!messageId || !scrollContainer.value) return null
 
-    // Проверяем кэш
-    if (elementCache.has(messageId)) {
-      const cachedElement = elementCache.get(messageId)
-      // Проверяем, что элемент все еще в DOM
-      if (document.contains(cachedElement)) {
-        return cachedElement
-      } else {
-        // Удаляем из кэша, если элемент больше не в DOM
-        elementCache.delete(messageId)
-      }
-    }
-
-    const selector = `[data-message-id="${messageId}"].assistant-divider-start`
-    const element = document.querySelector(selector)
-
-    // Кэшируем найденный элемент
-    if (element) {
-      elementCache.set(messageId, element)
-    }
+    // Простой поиск по data-separator-id
+    const element = scrollContainer.value.querySelector(
+      `[data-separator-id="${messageId}"]`,
+    )
 
     return element
   }
 
   /**
    * Рассчитать позицию для прокрутки элемента к нижней границе экрана
-   * @param {HTMLElement} element - целевой элемент
-   * @returns {number} - позиция для скролла
    */
   const calculateScrollToBottom = (element) => {
     if (!element || !scrollContainer.value) return 0
@@ -108,7 +148,7 @@ export function useChatScroll(scrollContainer) {
     const elementRect = element.getBoundingClientRect()
 
     // Учитываем особенности мобильных устройств
-    const offset = isMobileDevice() ? 20 : 0 // Дополнительный отступ для мобильных
+    const offset = isMobileDevice() ? 20 : 0
 
     // Позиция для размещения элемента у нижней границы экрана
     return (
@@ -120,8 +160,6 @@ export function useChatScroll(scrollContainer) {
 
   /**
    * Рассчитать позицию для прокрутки элемента к верхней границе экрана
-   * @param {HTMLElement} element - целевой элемент
-   * @returns {number} - позиция для скролла
    */
   const calculateScrollToTop = (element) => {
     if (!element || !scrollContainer.value) return 0
@@ -130,7 +168,7 @@ export function useChatScroll(scrollContainer) {
     const elementRect = element.getBoundingClientRect()
 
     // Учитываем особенности мобильных устройств
-    const offset = isMobileDevice() ? 10 : 0 // Небольшой отступ сверху для мобильных
+    const offset = isMobileDevice() ? 10 : 0
 
     // Позиция для размещения элемента у верхней границы экрана
     return (
@@ -143,97 +181,57 @@ export function useChatScroll(scrollContainer) {
 
   /**
    * Выполнить плавную прокрутку к указанной позиции
-   * @param {number} targetY - целевая позиция
    */
   const performScroll = (targetY) => {
     // Не прокручиваем, если пользователь активно скроллит
     if (isScrolling.value) return
 
     // Не прокручиваем, если контейнер недоступен
-    if (!scrollContainer.value) return
+    if (!scrollContainer.value || !containerVisible.value) return
 
-    // Предотвращаем множественные одновременные прокрутки
-    if (isScrollInProgress.value) return
+    const element = scrollContainer.value
 
-    isScrollInProgress.value = true
-
-    // Проверяем поддержку плавной прокрутки
-    if (!isSmoothScrollSupported()) {
-      // Fallback для браузеров без поддержки smooth scrolling
-      scrollContainer.value.scrollTop = targetY
-      isScrollInProgress.value = false
-      return
+    if (behavior === 'smooth') {
+      element.scrollTo({
+        top: targetY,
+        behavior: 'smooth',
+      })
+    } else {
+      element.scrollTop = targetY
     }
-
-    // Используем плавную анимацию с easing
-    scrollPosition.value = targetY
-
-    // Отслеживаем изменения анимированной позиции и применяем к скроллу
-    const stopWatchingAnimation = watch(animatedScrollPosition, (newPos) => {
-      if (scrollContainer.value) {
-        scrollContainer.value.scrollTop = newPos
-      }
-    })
-
-    // Сбрасываем флаг после завершения анимации
-    const stopWatchingScroll = watch(isScrolling, (scrolling) => {
-      if (!scrolling && isScrollInProgress.value) {
-        isScrollInProgress.value = false
-        stopWatchingScroll()
-        stopWatchingAnimation()
-      }
-    })
   }
 
   /**
-   * Прокрутить assistant-divider-start к нижней границе экрана
-   * Используется при отправке нового сообщения пользователем
-   * @public
-   * @param {string} messageId - ID сообщения для поиска соответствующего divider
+   * Прокрутить разделитель к нижней границе экрана
    */
-  const scrollToAssistantDividerBottom = (messageId) => {
+  const scrollSeparatorToBottom = (messageId) => {
     nextTick(() => {
-      const divider = findAssistantDivider(messageId)
-      if (!divider) return
+      const separatorElement = findMessageSeparator(messageId)
+      if (!separatorElement) return
 
-      const targetY = calculateScrollToBottom(divider)
+      const targetY = calculateScrollToBottom(separatorElement)
       performScroll(targetY)
     })
   }
 
   /**
-   * Прокрутить assistant-divider-start к верхней границе экрана
-   * Используется при получении ответа от сервера
-   * @public
-   * @param {string} messageId - ID сообщения для поиска соответствующего divider
+   * Прокрутить разделитель к верхней границе экрана
    */
-  const scrollToAssistantDividerTop = (messageId) => {
+  const scrollSeparatorToTop = (messageId) => {
     nextTick(() => {
-      const divider = findAssistantDivider(messageId)
-      if (!divider) return
+      const separatorElement = findMessageSeparator(messageId)
 
-      const targetY = calculateScrollToTop(divider)
+      if (!separatorElement) {
+        return
+      }
+
+      const targetY = calculateScrollToTop(separatorElement)
       performScroll(targetY)
     })
-  }
-
-  /**
-   * Простая мгновенная прокрутка к низу контейнера
-   * Используется для первоначальной прокрутки при загрузке компонента
-   * @public
-   */
-  const scrollToBottom = () => {
-    if (!scrollContainer.value) return
-    
-    // Мгновенная прокрутка без анимации
-    scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight
   }
 
   /**
    * Найти новое локальное сообщение пользователя
-   * @param {Array} newMessages - новый массив сообщений
-   * @param {Array} oldMessages - предыдущий массив сообщений
-   * @returns {Object|null} - новое сообщение или null
    */
   const findNewLocalUserMessage = (newMessages, oldMessages) => {
     if (!newMessages || !oldMessages) return null
@@ -254,9 +252,6 @@ export function useChatScroll(scrollContainer) {
 
   /**
    * Найти сообщение бота, которое изменило статус на 'replied'
-   * @param {Array} newMessages - новый массив сообщений
-   * @param {Array} oldMessages - предыдущий массив сообщений
-   * @returns {Object|null} - сообщение с изменившимся статусом или null
    */
   const findNewlyRepliedMessage = (newMessages, oldMessages) => {
     if (!newMessages || !oldMessages) return null
@@ -281,72 +276,149 @@ export function useChatScroll(scrollContainer) {
     return null
   }
 
-  // Дебаунсинг для оптимизации производительности watchers
-  const debouncedFirstScroll = useDebounceFn((newMessages, oldMessages) => {
-    const newUserMessage = findNewLocalUserMessage(newMessages, oldMessages)
-    if (newUserMessage) {
-      scrollToAssistantDividerBottom(newUserMessage.id)
-    }
-  }, 50)
+  /**
+   * Умная прокрутка при изменениях в сообщениях
+   */
+  const enableSmartScroll = (messagesRef) => {
+    if (!messagesRef) return
 
-  const debouncedSecondScroll = useDebounceFn((newMessages, oldMessages) => {
-    const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
+    // Дебаунсинг для оптимизации производительности
+    const debouncedFirstScroll = useDebounceFn((newMessages, oldMessages) => {
+      const newUserMessage = findNewLocalUserMessage(newMessages, oldMessages)
+      if (newUserMessage) {
+        scrollSeparatorToBottom(newUserMessage.id)
+      }
+    }, 50)
 
-    if (repliedMessage) {
-      // Находим последнее локальное сообщение пользователя (самое новое)
-      const lastUserMessage = newMessages
-        .filter((msg) => msg.type === 'user')
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0]
+    // Функция для мгновенной активации блокировки (без дебаунсинга)
+    const activateSmartScrollBlocking = (newMessages, oldMessages) => {
+      const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
 
-      if (lastUserMessage) {
-        scrollToAssistantDividerTop(lastUserMessage.id)
+      if (repliedMessage) {
+        // МГНОВЕННО активируем флаг блокировки
+        isSmartScrollActive.value = true
       }
     }
-  }, 50)
 
-  // Отслеживание изменений в сообщениях для динамических прокруток
-  watch(
-    () => chatStore.sortedMessages,
-    (newMessages, oldMessages) => {
-      // Обычная логика для новых сообщений
-      debouncedFirstScroll(newMessages, oldMessages)
-    },
-    {
-      deep: true,
-      flush: 'post', // Выполняем после обновления DOM
-    },
-  )
+    // Дебаунсированная функция для самой прокрутки
+    const debouncedSecondScroll = useDebounceFn((newMessages, oldMessages) => {
+      const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
 
+      if (repliedMessage) {
+        // Находим пользовательское сообщение, которое предшествует ответу бота
+        // assistant-title находится МЕЖДУ пользовательским сообщением и ответом бота
+        const userMessage = newMessages
+          .filter((msg) => msg.type === 'user')
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] // Последнее пользовательское сообщение
 
+        if (userMessage) {
+          // Ждем следующего тика, чтобы DOM успел обновиться
+          nextTick(() => {
+            scrollSeparatorToTop(userMessage.id)
+          })
+        }
 
-  // Отслеживание изменений в сообщениях для второй прокрутки (ответы сервера)
-  watch(() => chatStore.sortedMessages, debouncedSecondScroll, {
-    deep: true,
-    flush: 'post', // Выполняем после обновления DOM
-  })
+        // Сбрасываем флаг через время анимации + буфер
+        setTimeout(() => {
+          isSmartScrollActive.value = false
+        }, 1000) // 600ms анимация + 400ms буфер
+      }
+    }, 50)
 
-  // Очистка кэша при размонтировании компонента
-  onUnmounted(() => {
-    elementCache.clear()
-  })
+    // Отслеживание изменений в сообщениях для динамических прокруток
+    watchArray(
+      messagesRef,
+      (newMessages, oldMessages, added, removed) => {
+        // Первоначальная загрузка - прокручиваем к низу
+        if (oldMessages.length === 0 && newMessages.length > 0) {
+          nextTick(() => scrollToBottom())
+          return
+        }
 
-  // Возвращаем публичный API композабла
+        // Обычная логика для новых сообщений
+        debouncedFirstScroll(newMessages, oldMessages)
+      },
+      { flush: 'post' },
+    )
+
+    // Отслеживание изменений в сообщениях для второй прокрутки (ответы сервера)
+    watchDeep(
+      messagesRef,
+      (newMessages, oldMessages) => {
+        // МГНОВЕННО активируем блокировку (без дебаунсинга)
+        activateSmartScrollBlocking(newMessages, oldMessages)
+        // Затем выполняем дебаунсированную прокрутку
+        debouncedSecondScroll(newMessages, oldMessages)
+      },
+      { flush: 'post' },
+    )
+  }
+
+  // Автоматическая прокрутка при появлении нового контента
+  const enableAutoScroll = (enable = true) => {
+    if (!enable) return
+
+    watchEffect(() => {
+      // Блокируем автоматическую прокрутку во время умной прокрутки
+      if (isSmartScrollActive.value) return
+
+      if (containerVisible.value && arrivedState.bottom && !isScrolling.value) {
+        // Небольшая задержка для обеспечения обновления DOM
+        nextTick(() => {
+          if (canScrollToBottom.value) {
+            scrollToBottom()
+          }
+        })
+      }
+    })
+  }
+
+  // ============================================================================
+  // Child Container Comparison
+  // ============================================================================
+
+  /**
+   * Создает computed для проверки необходимости прокрутки
+   * @param {Ref} childContainer - ссылка на дочерний контейнер
+   * @returns {ComputedRef<boolean>} true если контент больше контейнера и нужна прокрутка
+   */
+  const checkScrollNeeded = (childContainer) => {
+    return computed(() => {
+      if (!scrollContainer.value || !childContainer.value) return false
+      
+      const parentHeight = scrollContainer.value.clientHeight
+      const childHeight = childContainer.value.scrollHeight
+      
+      return childHeight > parentHeight
+    })
+  }
+
   return {
-    /**
-     * Прокрутить к нижней границе экрана (для новых сообщений пользователя)
-     * @param {string} messageId - ID сообщения
-     */
-    scrollToAssistantDividerBottom,
-    
-    /**
-     * Прокрутить к верхней границе экрана (для ответов сервера)
-     * @param {string} messageId - ID сообщения
-     */
-    scrollToAssistantDividerTop,
-    
-    /**
-     * Простая прокрутка к низу контейнера (для первоначальной загрузки)
-     */
+    // Основные функции
     scrollToBottom,
+    scrollToElement,
+    enableAutoScroll,
+
+    // Новые функции для умной прокрутки
+    enableSmartScroll,
+    scrollSeparatorToBottom,
+    scrollSeparatorToTop,
+
+    // Функция для проверки необходимости прокрутки
+    checkScrollNeeded,
+
+    // Состояние прокрутки
+    scrollY: readonly(scrollY),
+    isScrolling: readonly(isScrolling),
+    isScrolledToBottom,
+    canScrollToBottom,
+    arrivedState: readonly(arrivedState),
+    directions: readonly(directions),
+
+    // Состояние умной прокрутки
+    isSmartScrollActive: readonly(isSmartScrollActive),
+
+    // Видимость контейнера
+    containerVisible: readonly(containerVisible),
   }
 }

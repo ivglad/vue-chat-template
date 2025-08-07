@@ -1,1 +1,8 @@
-@layer preset {}
+@layer preset {
+  :root {
+    --p-progressspinner-color-one: var(--p-primary-color);
+    --p-progressspinner-color-two: var(--p-primary-color);
+    --p-progressspinner-color-three: var(--p-primary-color);
+    --p-progressspinner-color-four: var(--p-primary-color);
+  }
+}

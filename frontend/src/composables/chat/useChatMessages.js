@@ -109,10 +109,7 @@ export function useChatMessages() {
     // 2. Создаем загрузочное сообщение бота
     const loadingMessage = chatStore.createLoadingBotMessage(userMessage.id)
 
-    // 3. Небольшая задержка, чтобы пользователь увидел локальное сообщение
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // 4. Обновляем статус пользовательского сообщения на "отправляется"
+    // 3. Обновляем статус пользовательского сообщения на "отправляется"
     chatStore.updateMessageStatus(userMessage.id, 'sending')
     chatStore.clearError()
 
@@ -128,19 +125,19 @@ export function useChatMessages() {
         response?.data?.data?.user_message &&
         response?.data?.data?.bot_response
       ) {
-        // 5. Обновляем статус пользовательского сообщения на "отправлено"
+        // 4. Обновляем статус пользовательского сообщения на "отправлено"
         chatStore.updateMessageStatus(userMessage.id, 'sent')
 
-        // 6. Заменяем загрузочное сообщение на реальный ответ бота
+        // 5. Заменяем загрузочное сообщение на реальный ответ бота
         chatStore.replaceLoadingMessage(
           loadingMessage.id,
           response.data.data.bot_response,
         )
 
-        // 7. Обновляем статус пользовательского сообщения на "получен ответ"
+        // 6. Обновляем статус пользовательского сообщения на "получен ответ"
         chatStore.updateMessageStatus(userMessage.id, 'replied')
 
-        // 8. Обновляем документы в сообщении пользователя, если они не были прикреплены
+        // 7. Обновляем документы в сообщении пользователя, если они не были прикреплены
         const serverUserMessage = response.data.data.user_message
         if (serverUserMessage && serverUserMessage.context_documents && 
             (!userMessage.context_documents || userMessage.context_documents.length === 0)) {

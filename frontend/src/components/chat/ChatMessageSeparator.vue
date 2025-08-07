@@ -50,7 +50,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="assistant-title flex flex-col gap-2.5 mt-8">
+  <div class="assistant-title flex flex-col gap-2.5 mt-8 mb-4 -top-4 bg-[#EDEFF6] z-10">
     <div class="flex flex-1 items-center gap-2.5">
       <i-custom-robot-original class="w-[40px] h-[40px] flex-shrink-0" />
       <motion.span
@@ -60,7 +60,7 @@ onUnmounted(() => {
         {{ separatorText }}
       </motion.span>
     </div>
-    <Divider class="assistant-divider-start w-full bg-surface-400 mt-0" />
+    <Divider class="assistant-divider-start w-full bg-surface-400 mt-0 mb-0" />
   </div>
 </template>
 

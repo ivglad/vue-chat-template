@@ -1,7 +1,6 @@
 <script setup>
 import { AnimatePresence, motion } from 'motion-v'
-import { useChatScroll } from '@/composables/chat/useChatScroll'
-import { useElementVisibility } from '@vueuse/core'
+import { useResizeObserver, toRef } from '@vueuse/core'
 
 const props = defineProps({
   messages: {
@@ -34,73 +33,64 @@ const stateAnimationProps = createAnimationProps('chatStateTransition')
 const messagesContainer = ref(null)
 const messagesChildContainer = ref(null)
 
-// Отслеживаем видимость контейнера сообщений для определения готовности к прокрутке
-const messagesChildContainerVisible = useElementVisibility(messagesChildContainer)
-
-const overflowClasses = computed(() => {
-  if (!messagesContainer.value || !messagesChildContainer.value) return ''
-  const containerHeight = messagesContainer.value.clientHeight
-  const childHeight =
-    messagesChildContainer.value.scrollHeight ||
-    messagesChildContainer.value.offsetHeight
-  return childHeight > containerHeight ? 'pr-1' : ''
+// Используем оптимизированный композабл для прокрутки
+const {
+  scrollToBottom,
+  isScrolledToBottom,
+  enableSmartScroll,
+  isSmartScrollActive,
+  checkScrollNeeded,
+} = useChatScroll(messagesContainer, {
+  behavior: 'smooth',
+  threshold: 0.1,
 })
 
-// Инициализируем композабл для плавной прокрутки чата
-const { scrollToBottom } = useChatScroll(messagesContainer)
+// Проверяем необходимость прокрутки
+const needsScroll = checkScrollNeeded(messagesChildContainer)
 
-// Флаг для отслеживания первоначальной прокрутки
-const hasPerformedInitialScroll = ref(false)
-
-// Реактивно отслеживаем готовность к прокрутке
-const isReadyForScroll = computed(() => {
-  return (
-    currentState.value === 'messages' &&
-    messagesChildContainerVisible.value &&
-    messagesChildContainer.value &&
-    messagesContainer.value
-  )
-})
-
-// Функция для выполнения первоначальной прокрутки
-const performInitialScroll = () => {
-  if (!hasPerformedInitialScroll.value && isReadyForScroll.value) {
-    scrollToBottom()
-    hasPerformedInitialScroll.value = true
-  }
-}
-
-// Отслеживаем готовность к прокрутке и выполняем её при необходимости
-watchEffect(() => {
-  if (isReadyForScroll.value) {
-    // Используем nextTick для гарантии, что DOM обновлен
-    nextTick(performInitialScroll)
-  }
-})
-
-// Обработчик завершения анимации появления сообщений
-const onMessagesAnimationComplete = () => {
-  // Дополнительная проверка и прокрутка после завершения анимации
-  nextTick(performInitialScroll)
-}
-
-// Сбрасываем флаг при изменении списка сообщений (для новых загрузок)
-watch(
-  () => props.messages.length,
-  (newLength, oldLength) => {
-    // Сбрасываем флаг только если сообщения были очищены (новая загрузка)
-    if (newLength === 0 || (oldLength > 0 && newLength < oldLength)) {
-      hasPerformedInitialScroll.value = false
+// Отслеживаем изменения размера дочернего контейнера
+useResizeObserver(messagesChildContainer, (entries) => {
+  if (entries[0]) {
+    // Блокируем автоматическую прокрутку во время умной прокрутки
+    if (isSmartScrollActive.value) {
+      return
+    }
+    // Прокручиваем вниз при изменении размера контента, если были внизу
+    if (isScrolledToBottom.value) {
+      nextTick(scrollToBottom)
     }
   }
-)
+})
+
+// Функция для поиска соответствующего ответа бота для пользовательского сообщения
+const getBotResponseForUser = (userMessage, userIndex) => {
+  // Ищем следующее сообщение бота после пользовательского
+  const nextBotMessage = props.messages
+    .slice(userIndex + 1)
+    .find((msg) => msg.type === 'bot')
+
+  if (nextBotMessage) {
+    return nextBotMessage
+  }
+  // Если нет ответа бота, создаем объект с состоянием загрузки
+  return {
+    isLoading: true,
+    status: 'loading',
+    loadingText: 'Обрабатываю запрос...',
+  }
+}
+
+// Включаем умную прокрутку для всех типов сообщений
+onMounted(() => {
+  enableSmartScroll(toRef(props, 'messages'))
+})
 </script>
 
 <template>
   <div
     ref="messagesContainer"
     class="flex flex-1 items-center justify-center w-full overflow-y-auto px-6 py-4 pb-0 space-y-4 scroll-smooth"
-    :class="overflowClasses">
+    :class="{ 'pr-1': needsScroll }">
     <AnimatePresence mode="wait">
       <motion.div
         v-if="currentState === 'loading'"
@@ -108,7 +98,8 @@ watch(
         v-bind="stateAnimationProps"
         class="flex items-center justify-center py-8">
         <ProgressSpinner
-          class="app-progressspinner self-center w-[3rem] h-[3rem]"
+          strokeWidth="4"
+          class="app-progressspinner self-center w-[4rem] h-[4rem]"
           fill="transparent" />
       </motion.div>
 
@@ -123,16 +114,21 @@ watch(
         v-else-if="currentState === 'messages'"
         key="messages"
         v-bind="stateAnimationProps"
-        class="w-full self-start"
-        @complete="onMessagesAnimationComplete">
+        class="w-full self-start">
         <div ref="messagesChildContainer">
-          <ChatMessage
-            v-for="(message, index) in messages"
-            :key="message.id"
-            :message="message"
-            :index="index"
-            class="max-w-[70rem] justify-self-center"
-            :class="{ 'mb-8 last:mb-4': message.type !== 'user' }" />
+          <template v-for="(message, index) in messages" :key="message.id">
+            <ChatMessage
+              :message="message"
+              :index="index"
+              :data-message-id="message.id"
+              class="max-w-[70rem] justify-self-center"
+              :class="{ 'mb-8 last:mb-4': message.type !== 'user' }" />
+
+            <ChatMessageSeparator
+              v-if="message.type === 'user'"
+              :message="getBotResponseForUser(message, index)"
+              :data-separator-id="message.id" />
+          </template>
         </div>
       </motion.div>
     </AnimatePresence>
