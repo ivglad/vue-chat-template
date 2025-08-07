@@ -142,8 +142,9 @@ onMounted(() => {
       </template>
     </div>
 
-    <div
-      v-else
-      v-html="formattedContent" />
+    <div v-else v-html="formattedContent" />
+    <Divider
+      v-if="content && type !== 'user'"
+      class="assistant-divider-end bg-surface-400" />
   </div>
 </template>

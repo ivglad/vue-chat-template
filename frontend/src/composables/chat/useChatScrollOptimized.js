@@ -1,12 +1,4 @@
 import {
-  computed,
-  nextTick,
-  watchEffect,
-  onUnmounted,
-  ref,
-  readonly,
-} from 'vue'
-import {
   useElementVisibility,
   useScroll,
   useResizeObserver,
@@ -57,10 +49,12 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
   useResizeObserver(scrollContainer, () => {
     // Блокируем автоматическую прокрутку во время умной прокрутки
     if (isSmartScrollActive.value) {
-      console.log('🚫 ResizeObserver (composable): Blocked by smart scroll flag')
+      console.log(
+        '🚫 ResizeObserver (composable): Blocked by smart scroll flag',
+      )
       return
     }
-    
+
     // Автоматически прокручиваем вниз при изменении размера, если уже были внизу
     if (arrivedState.bottom) {
       console.log('📏 ResizeObserver (composable): Scrolling to bottom')
@@ -124,8 +118,7 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
   // Отслеживаем размеры окна для адаптивности
   const { width: windowWidth } = useWindowSize()
 
-  // Кэш для элементов DOM для оптимизации производительности
-  const elementCache = new Map()
+  // Упрощенная логика поиска разделителей без кэширования
 
   /**
    * Определить, является ли устройство мобильным
@@ -135,59 +128,22 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
   }
 
   /**
-   * Найти элемент assistant-title по ID сообщения с кэшированием
-   * assistant-title - это разделитель между локальным сообщением пользователя и ответом сервера
+   * Найти разделитель по ID сообщения (упрощенная версия)
    */
-  const findAssistantTitle = (messageId) => {
-    if (!messageId) return null
+  const findMessageSeparator = (messageId) => {
+    if (!messageId || !scrollContainer.value) return null
 
-    // Проверяем кэш
-    if (elementCache.has(messageId)) {
-      const cachedElement = elementCache.get(messageId)
-      // Проверяем, что элемент все еще в DOM
-      if (document.contains(cachedElement)) {
-        return cachedElement
-      } else {
-        // Удаляем из кэша, если элемент больше не в DOM
-        elementCache.delete(messageId)
-      }
-    }
+    // Простой поиск по data-separator-id
+    const element = scrollContainer.value.querySelector(
+      `[data-separator-id="${messageId}"]`,
+    )
 
-    // Стратегия 1: Ищем внутри элемента с data-message-id (оригинальный подход)
-    let element = scrollContainer.value?.querySelector(`[data-message-id="${messageId}"] .assistant-title`)
-    
-    if (!element) {
-      // Стратегия 2: Ищем ближайший assistant-title к элементу с data-message-id
-      const messageElement = scrollContainer.value?.querySelector(`[data-message-id="${messageId}"]`)
-      if (messageElement) {
-        // Ищем assistant-title до или после элемента сообщения
-        element = messageElement.previousElementSibling?.classList.contains('assistant-title') 
-          ? messageElement.previousElementSibling
-          : messageElement.nextElementSibling?.classList.contains('assistant-title')
-          ? messageElement.nextElementSibling
-          : null
-      }
-    }
-    
-    if (!element) {
-      // Стратегия 3: Ищем по индексу (последний assistant-title для последнего сообщения)
-      const allAssistantTitles = Array.from(scrollContainer.value?.querySelectorAll('.assistant-title') || [])
-      const allMessageElements = Array.from(scrollContainer.value?.querySelectorAll('[data-message-id]') || [])
-      
-      // Находим индекс текущего сообщения
-      const messageIndex = allMessageElements.findIndex(el => el.getAttribute('data-message-id') === messageId)
-      
-      if (messageIndex >= 0 && allAssistantTitles[messageIndex]) {
-        element = allAssistantTitles[messageIndex]
-      }
-    }
-
-    console.log('element', element)
-
-    // Кэшируем найденный элемент
-    if (element) {
-      elementCache.set(messageId, element)
-    }
+    console.log(
+      '🔍 Looking for separator with messageId:',
+      messageId,
+      'found:',
+      !!element,
+    )
 
     return element
   }
@@ -256,64 +212,37 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
   }
 
   /**
-   * Прокрутить assistant-title к нижней границе экрана
+   * Прокрутить разделитель к нижней границе экрана
    */
-  const scrollAssistantTitleToBottom = (messageId) => {
+  const scrollSeparatorToBottom = (messageId) => {
     nextTick(() => {
-      const titleElement = findAssistantTitle(messageId)
-      if (!titleElement) return
+      const separatorElement = findMessageSeparator(messageId)
+      if (!separatorElement) return
 
-      const targetY = calculateScrollToBottom(titleElement)
+      const targetY = calculateScrollToBottom(separatorElement)
       performScroll(targetY)
     })
   }
 
   /**
-   * Прокрутить assistant-title к верхней границе экрана
+   * Прокрутить разделитель к верхней границе экрана
    */
-  const scrollAssistantTitleToTop = (messageId) => {
-    console.log('🔍 Searching for assistant-title with messageId:', messageId)
-    
+  const scrollSeparatorToTop = (messageId) => {
+    console.log('🔍 Searching for separator with messageId:', messageId)
+
     nextTick(() => {
-      const titleElement = findAssistantTitle(messageId)
-      
-      if (!titleElement) {
-        console.error('❌ Assistant-title NOT FOUND for messageId:', messageId)
-        console.log('📦 scrollContainer.value:', scrollContainer.value)
+      const separatorElement = findMessageSeparator(messageId)
 
-        // Подробная диагностика
-        const allElementsInContainer = Array.from(
-          scrollContainer.value?.querySelectorAll('[data-message-id]') || [],
-        )
-        console.log(
-          '🔍 Available elements with data-message-id (in container):',
-          allElementsInContainer.length,
-        )
-
-        const allElementsInDocument = Array.from(
-          document.querySelectorAll('[data-message-id]'),
-        )
-        console.log(
-          '🔍 Available elements with data-message-id (in document):',
-          allElementsInDocument.length,
-        )
-
-        const allAssistantTitles = Array.from(
-          scrollContainer.value?.querySelectorAll('.assistant-title') || [],
-        )
-        console.log(
-          '🎯 All assistant-title elements found:',
-          allAssistantTitles.length,
-        )
-
+      if (!separatorElement) {
+        console.error('❌ Separator NOT FOUND for messageId:', messageId)
         return
       }
 
-      console.log('✅ Assistant-title FOUND:', titleElement)
-      
-      const targetY = calculateScrollToTop(titleElement)
+      console.log('✅ Separator FOUND:', separatorElement)
+
+      const targetY = calculateScrollToTop(separatorElement)
       console.log('📐 Calculated scroll position:', targetY)
-      
+
       performScroll(targetY)
       console.log('🎯 Scroll executed to position:', targetY)
     })
@@ -375,7 +304,7 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
     const debouncedFirstScroll = useDebounceFn((newMessages, oldMessages) => {
       const newUserMessage = findNewLocalUserMessage(newMessages, oldMessages)
       if (newUserMessage) {
-        scrollAssistantTitleToBottom(newUserMessage.id)
+        scrollSeparatorToBottom(newUserMessage.id)
       }
     }, 50)
 
@@ -384,8 +313,11 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
       const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
 
       if (repliedMessage) {
-        console.log('🎯 Smart scroll: INSTANT blocking for message', repliedMessage.id)
-        
+        console.log(
+          '🎯 Smart scroll: INSTANT blocking for message',
+          repliedMessage.id,
+        )
+
         // МГНОВЕННО активируем флаг блокировки
         isSmartScrollActive.value = true
         console.log('🚫 Smart scroll: Blocking automatic scroll (INSTANT)')
@@ -397,24 +329,30 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
       const repliedMessage = findNewlyRepliedMessage(newMessages, oldMessages)
 
       if (repliedMessage) {
-        console.log('🎯 Smart scroll: Executing scroll for bot message', repliedMessage.id)
-        
+        console.log(
+          '🎯 Smart scroll: Executing scroll for bot message',
+          repliedMessage.id,
+        )
+
         // Находим пользовательское сообщение, которое предшествует ответу бота
         // assistant-title находится МЕЖДУ пользовательским сообщением и ответом бота
         const userMessage = newMessages
-          .filter(msg => msg.type === 'user')
+          .filter((msg) => msg.type === 'user')
           .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0] // Последнее пользовательское сообщение
-        
+
         if (userMessage) {
           // Ждем следующего тика, чтобы DOM успел обновиться
           nextTick(() => {
             console.log('🔍 Found corresponding user message:', userMessage.id)
-            scrollAssistantTitleToTop(userMessage.id)
+            scrollSeparatorToTop(userMessage.id)
           })
         } else {
-          console.error('❌ No user message found for bot reply:', repliedMessage.id)
+          console.error(
+            '❌ No user message found for bot reply:',
+            repliedMessage.id,
+          )
         }
-        
+
         // Сбрасываем флаг через время анимации + буфер
         setTimeout(() => {
           isSmartScrollActive.value = false
@@ -459,7 +397,7 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
     watchEffect(() => {
       // Блокируем автоматическую прокрутку во время умной прокрутки
       if (isSmartScrollActive.value) return
-      
+
       if (containerVisible.value && arrivedState.bottom && !isScrolling.value) {
         // Небольшая задержка для обеспечения обновления DOM
         nextTick(() => {
@@ -471,10 +409,7 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
     })
   }
 
-  // Очистка кэша при размонтировании компонента
-  onUnmounted(() => {
-    elementCache.clear()
-  })
+  // Композабл больше не использует кэширование DOM элементов
 
   return {
     // Основные функции
@@ -484,8 +419,8 @@ export function useChatScrollOptimized(scrollContainer, options = {}) {
 
     // Новые функции для умной прокрутки
     enableSmartScroll,
-    scrollAssistantTitleToBottom,
-    scrollAssistantTitleToTop,
+    scrollSeparatorToBottom,
+    scrollSeparatorToTop,
 
     // Состояние прокрутки
     scrollY: readonly(scrollY),

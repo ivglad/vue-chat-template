@@ -61,6 +61,7 @@ export const useChatHistory = (params = {}) => {
     queryKey: ['chatHistory', params],
     queryFn: () => apiGetChatHistory(params),
     select: (response) => response.data?.data || {},
+    refetchOnWindowFocus: true,
   })
 }
 

@@ -62,6 +62,25 @@ useResizeObserver(messagesChildContainer, () => {
   }
 })
 
+// Функция для поиска соответствующего ответа бота для пользовательского сообщения
+const getBotResponseForUser = (userMessage, userIndex) => {
+  // Ищем следующее сообщение бота после пользовательского
+  const nextBotMessage = props.messages
+    .slice(userIndex + 1)
+    .find((msg) => msg.type === 'bot')
+
+  if (nextBotMessage) {
+    return nextBotMessage
+  }
+
+  // Если нет ответа бота, создаем объект с состоянием загрузки
+  return {
+    isLoading: true,
+    status: 'loading',
+    loadingText: 'Обрабатываю запрос...',
+  }
+}
+
 // Включаем умную прокрутку для всех типов сообщений
 onMounted(() => {
   enableSmartScroll(toRef(props, 'messages'))
@@ -97,14 +116,19 @@ onMounted(() => {
         v-bind="stateAnimationProps"
         class="w-full self-start">
         <div ref="messagesChildContainer">
-          <ChatMessage
-            v-for="(message, index) in messages"
-            :key="message.id"
-            :message="message"
-            :index="index"
-            :data-message-id="message.id"
-            class="max-w-[70rem] justify-self-center"
-            :class="{ 'mb-8 last:mb-4': message.type !== 'user' }" />
+          <template v-for="(message, index) in messages" :key="message.id">
+            <ChatMessage
+              :message="message"
+              :index="index"
+              :data-message-id="message.id"
+              class="max-w-[70rem] justify-self-center"
+              :class="{ 'mb-8 last:mb-4': message.type !== 'user' }" />
+
+            <ChatMessageSeparator
+              v-if="message.type === 'user'"
+              :message="getBotResponseForUser(message, index)"
+              :data-separator-id="message.id" />
+          </template>
         </div>
       </motion.div>
     </AnimatePresence>
