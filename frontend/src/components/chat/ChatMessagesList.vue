@@ -115,7 +115,7 @@ onMounted(() => {
         key="messages"
         v-bind="stateAnimationProps"
         class="flex justify-center w-full h-full max-w-[70rem]">
-        <div ref="messagesChildContainer" class="">
+        <div ref="messagesChildContainer" class="w-full h-full">
           <template v-for="(message, index) in messages" :key="message.id">
             <ChatMessage
               :message="message"

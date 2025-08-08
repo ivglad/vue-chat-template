@@ -139,9 +139,16 @@ export function useChatMessages() {
 
         // 7. Обновляем документы в сообщении пользователя, если они не были прикреплены
         const serverUserMessage = response.data.data.user_message
-        if (serverUserMessage && serverUserMessage.context_documents && 
-            (!userMessage.context_documents || userMessage.context_documents.length === 0)) {
-          chatStore.updateMessageDocuments(userMessage.id, serverUserMessage.context_documents)
+        if (
+          serverUserMessage &&
+          serverUserMessage.context_documents &&
+          (!userMessage.context_documents ||
+            userMessage.context_documents.length === 0)
+        ) {
+          chatStore.updateMessageDocuments(
+            userMessage.id,
+            serverUserMessage.context_documents,
+          )
         }
       }
 
