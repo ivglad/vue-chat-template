@@ -14,7 +14,7 @@ const handleSendMessage = async (messageData) => {
 </script>
 
 <template>
-  <div class="h-full flex flex-col items-center relative bg-[#EDEFF6]">
+  <div class="flex flex-col items-center relative w-full h-full bg-[#EDEFF6] overflow-hidden">
     <ChatHeader />
 
     <ChatMessagesList

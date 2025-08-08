@@ -89,7 +89,7 @@ onMounted(() => {
 <template>
   <div
     ref="messagesContainer"
-    class="flex flex-1 items-center justify-center w-full overflow-y-auto px-6 py-4 pb-0 space-y-4 scroll-smooth"
+    class="flex flex-1 items-center justify-center w-full overflow-y-auto overflow-x-hidden px-6 py-4 pb-0 space-y-4 scroll-smooth"
     :class="{ 'pr-1': needsScroll }">
     <AnimatePresence mode="wait">
       <motion.div
@@ -114,14 +114,13 @@ onMounted(() => {
         v-else-if="currentState === 'messages'"
         key="messages"
         v-bind="stateAnimationProps"
-        class="w-full self-start">
-        <div ref="messagesChildContainer">
+        class="flex justify-center w-full h-full max-w-[70rem]">
+        <div ref="messagesChildContainer" class="">
           <template v-for="(message, index) in messages" :key="message.id">
             <ChatMessage
               :message="message"
               :index="index"
               :data-message-id="message.id"
-              class="max-w-[70rem] justify-self-center"
               :class="{ 'mb-8 last:mb-4': message.type !== 'user' }" />
 
             <ChatMessageSeparator

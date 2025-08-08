@@ -88,7 +88,7 @@ const pageAnimationProps = computed(() => {
         <motion.div
           :key="route.path"
           v-bind="pageAnimationProps"
-          class="w-full h-full flex-1">
+          class="w-full h-full overflow-hidden">
           <component :is="Component" />
         </motion.div>
       </AnimatePresence>

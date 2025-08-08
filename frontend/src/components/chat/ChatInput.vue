@@ -191,43 +191,42 @@ watch(
 </script>
 
 <template>
-  <div ref="inputContainer" class="relative w-full pb-4 px-6 rounded-t-2xl">
-    <AnimatePresence>
-      <AnimatedContainer
-        v-if="showDocumentsMenu"
-        preset="slideUp"
-        container-class="absolute bottom-full w-fit mb-4">
-        <Listbox
-          v-model="selectedDocuments"
-          :options="documents"
-          multiple
-          optionLabel="label"
-          listStyle="max-height:200px"
-          class="w-[250px] max-w-[250px] border-none shadow-none rounded-2xl"
-          :pt="{
-            root: 'bg-white rounded-2xl shadow-lg',
-            list: `${
-              documents.length > 4 ? 'p-2 pr-0' : 'p-2'
-            } overflow-hidden`,
-            option:
-              'block rounded-xl text-nowrap text-ellipsis p-3 hover:bg-[#EDEFF6] transition-colors duration-150',
-            optionLabel: 'truncate',
-          }"
-          @change="closeDocumentsMenu">
-          <template #empty>
-            <div
-              class="flex flex-col items-center justify-center py-8 text-gray-500">
-              <i-custom-doc class="text-2xl text-color-muted" />
-              <span class="mt-2 text-sm">Нет доступных документов</span>
-            </div>
-          </template>
-        </Listbox>
-      </AnimatedContainer>
-    </AnimatePresence>
-
+  <div ref="inputContainer" class="w-full px-6 pb-4 rounded-t-2xl">
     <AnimatedContainer
-      preset="layoutShift"
-      container-class="w-full max-w-[70rem] justify-self-center bg-white rounded-2xl p-2 transition-all duration-200">
+    preset="layoutShift"
+    container-class="relative w-full max-w-[70rem] justify-self-center bg-white rounded-2xl p-2">
+      <AnimatePresence>
+        <AnimatedContainer
+          v-if="showDocumentsMenu"
+          preset="slideUp"
+          container-class="absolute left-0 bottom-full w-fit mb-4">
+          <Listbox
+            v-model="selectedDocuments"
+            :options="documents"
+            multiple
+            optionLabel="label"
+            listStyle="max-height:200px"
+            class="w-[250px] max-w-[250px] border-none shadow-none rounded-2xl"
+            :pt="{
+              root: 'bg-white rounded-2xl shadow-lg',
+              list: `${
+                documents.length > 4 ? 'p-2 pr-0' : 'p-2'
+              } overflow-hidden`,
+              option:
+                'block rounded-xl text-nowrap text-ellipsis p-3 hover:bg-[#EDEFF6]',
+              optionLabel: 'truncate',
+            }"
+            @change="closeDocumentsMenu">
+            <template #empty>
+              <div
+                class="flex flex-col items-center justify-center py-8">
+                <i-custom-doc class="text-2xl text-color-muted" />
+                <span class="mt-2 text-sm">Нет доступных документов</span>
+              </div>
+            </template>
+          </Listbox>
+        </AnimatedContainer>
+      </AnimatePresence>
       <AnimatePresence>
         <AnimatedList
           v-if="selectedDocuments.length > 0"
